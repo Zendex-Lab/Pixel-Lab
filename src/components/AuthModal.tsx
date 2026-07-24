@@ -47,7 +47,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         </button>
 
         <h3 className="text-xl font-display font-bold mb-6">
-          {isLogin ? 'Вход в wplace' : 'Регистрация'}
+          {isLogin ? 'Вход в Pixel Lab' : 'Регистрация'}
         </h3>
 
         {error && (

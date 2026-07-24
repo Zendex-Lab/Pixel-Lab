@@ -29,6 +29,7 @@ const MAX_CHARGES_GROWTH_PER_PIXEL = 1;
 const LIMIT_UPGRADE_STEP = 50;
 const CHARGE_PACKS = [50, 100, 200] as const;
 const SHOP_COOLDOWN_MS = 5 * 60 * 1000; 
+const MAX_REGULAR_LIMIT = 2000; // Жесткий лимит зарядов для обычных пользователей
 
 const PALETTE_HEX: string[] = [
   "#FFFFFF", "#D4D7D9", "#898D90", "#000000",
@@ -202,8 +203,13 @@ export default function PixelBattleCanvas({
       });
     }
     
+    let newMaxCharges = maxChargesRef.current + (count * MAX_CHARGES_GROWTH_PER_PIXEL);
+    // Жесткое ограничение лимита при рисовании для обычных пользователей
+    if (!profile?.is_admin) {
+      newMaxCharges = Math.min(newMaxCharges, MAX_REGULAR_LIMIT);
+    }
+
     const newCharges = Math.max(0, chargesRef.current - count);
-    const newMaxCharges = maxChargesRef.current + (count * MAX_CHARGES_GROWTH_PER_PIXEL);
     
     chargesRef.current = newCharges;
     maxChargesRef.current = newMaxCharges;
@@ -217,7 +223,7 @@ export default function PixelBattleCanvas({
     
     pixelService.placePixelsBatch(drafts, session.user.id);
     userService.updateCharges(session.user.id, newCharges, newMaxCharges);
-  }, [session, width]);
+  }, [session, width, profile]);
 
   const clearDrafts = useCallback(() => {
     pendingPixelsRef.current.clear();
@@ -245,7 +251,11 @@ export default function PixelBattleCanvas({
 
   const handleBuyLimitUpgrade = useCallback(() => {
     if (isShopOnCooldown) return;
-    const newMaxCharges = maxChargesRef.current + LIMIT_UPGRADE_STEP;
+    let newMaxCharges = maxChargesRef.current + LIMIT_UPGRADE_STEP;
+    
+    // Блокировка попытки обойти лимит
+    if (!profile?.is_admin && newMaxCharges > MAX_REGULAR_LIMIT) return;
+
     maxChargesRef.current = newMaxCharges;
     setMaxCharges(newMaxCharges);
 
@@ -253,10 +263,15 @@ export default function PixelBattleCanvas({
       userService.recordShopPurchase(session.user.id, chargesRef.current, newMaxCharges);
     }
     triggerShopCooldown();
-  }, [isShopOnCooldown, session, triggerShopCooldown]);
+  }, [isShopOnCooldown, session, triggerShopCooldown, profile]);
 
   const handleBuyChargePack = useCallback((amount: number) => {
     if (isShopOnCooldown) return;
+    
+    // Блокировка попытки обойти лимит текущих зарядов
+    if (!profile?.is_admin && chargesRef.current + amount > maxChargesRef.current) return;
+    if (!profile?.is_admin && chargesRef.current + amount > MAX_REGULAR_LIMIT) return;
+
     const newCharges = Math.min(maxChargesRef.current, chargesRef.current + amount);
     chargesRef.current = newCharges;
     setCharges(newCharges);
@@ -265,7 +280,7 @@ export default function PixelBattleCanvas({
       userService.recordShopPurchase(session.user.id, newCharges, maxChargesRef.current);
     }
     triggerShopCooldown();
-  }, [isShopOnCooldown, session, triggerShopCooldown]);
+  }, [isShopOnCooldown, session, triggerShopCooldown, profile]);
 
   // ==========================================================================
   // Input Handling
@@ -611,6 +626,10 @@ export default function PixelBattleCanvas({
 
   const regenProgressFactor = (CHARGE_REGEN_MS - msUntilNextCharge) / CHARGE_REGEN_MS;
 
+  // Ограничения для интерфейса Магазина
+  const isLimitMaxed = !profile?.is_admin && maxCharges >= MAX_REGULAR_LIMIT;
+  const cannotUpgradeLimit = !profile?.is_admin && (maxCharges + LIMIT_UPGRADE_STEP > MAX_REGULAR_LIMIT);
+
   return (
     <div className={`relative flex h-full w-full flex-col font-sans ${className}`} style={{ background: 'var(--page-bg) fixed', color: 'var(--foreground)' }}>
       
@@ -797,7 +816,7 @@ export default function PixelBattleCanvas({
           </div>
           <div className="pl-3 sm:pl-4 border-l border-[var(--glass-border)] text-center text-[var(--muted-foreground)] hidden lg:block">
             <Info className="h-3 w-3 sm:h-4 sm:w-4 mx-auto mb-0.5 text-[var(--primary)]"/>
-            <div className="text-[10px] leading-tight">wplace<br/>v0.5</div>
+            <div className="text-[10px] leading-tight">wplace<br/>v0.6</div>
           </div>
         </div>
       </div>
@@ -838,6 +857,14 @@ export default function PixelBattleCanvas({
               </div>
             </div>
 
+            {/* Баннер максимального лимита */}
+            {isLimitMaxed && (
+              <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-medium">
+                <Info className="h-4 w-4 shrink-0" />
+                Достигнут максимальный лимит зарядов ({MAX_REGULAR_LIMIT})
+              </div>
+            )}
+
             {isShopOnCooldown && (
               <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-[var(--destructive)]/10 border border-[var(--destructive)]/30 text-[var(--destructive-foreground)] text-xs font-medium">
                 <Timer className="h-4 w-4 shrink-0" />
@@ -859,10 +886,16 @@ export default function PixelBattleCanvas({
                 </div>
                 <button
                   onClick={handleBuyLimitUpgrade}
-                  disabled={isShopOnCooldown || !session}
+                  disabled={isShopOnCooldown || cannotUpgradeLimit || !session}
                   className="px-3 py-2 min-w-[92px] rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
-                  {isShopOnCooldown ? <span className="flex items-center justify-center gap-1"><Timer className="h-3.5 w-3.5" />{formatCooldown(shopCooldownRemainingMs)}</span> : "БЕСПЛАТНО"}
+                  {isShopOnCooldown ? (
+                    <span className="flex items-center justify-center gap-1"><Timer className="h-3.5 w-3.5" />{formatCooldown(shopCooldownRemainingMs)}</span>
+                  ) : cannotUpgradeLimit ? (
+                    "МАКСИМУМ"
+                  ) : (
+                    "БЕСПЛАТНО"
+                  )}
                 </button>
               </div>
             </div>
@@ -873,7 +906,10 @@ export default function PixelBattleCanvas({
               </div>
               <div className="space-y-3">
                 {CHARGE_PACKS.map((amount) => {
-                  const wouldExceedMax = charges >= maxCharges;
+                  const wouldExceedMax = charges + amount > maxCharges;
+                  const willExceedAbsolute = !profile?.is_admin && (charges + amount > MAX_REGULAR_LIMIT);
+                  const isPackBlocked = isShopOnCooldown || wouldExceedMax || willExceedAbsolute || !session;
+
                   return (
                     <div key={amount} className="flex items-center justify-between p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:border-[var(--primary)]/50 transition-colors">
                       <div className="flex items-center gap-3">
@@ -881,16 +917,24 @@ export default function PixelBattleCanvas({
                         <div>
                           <div className="font-semibold text-sm">+{amount} зарядов</div>
                           <div className="text-xs text-[var(--muted-foreground)]">
-                            {wouldExceedMax ? "Заряды на максимуме" : `Пополнит до ${Math.min(maxCharges, charges + amount)}/${maxCharges}`}
+                            {wouldExceedMax || willExceedAbsolute
+                              ? "Превысит лимит"
+                              : `Пополнит до ${charges + amount}/${maxCharges}`}
                           </div>
                         </div>
                       </div>
                       <button
                         onClick={() => handleBuyChargePack(amount)}
-                        disabled={isShopOnCooldown || wouldExceedMax || !session}
+                        disabled={isPackBlocked}
                         className="px-3 py-2 min-w-[92px] rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-semibold hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
                       >
-                        {isShopOnCooldown ? <span className="flex items-center justify-center gap-1"><Timer className="h-3.5 w-3.5" />{formatCooldown(shopCooldownRemainingMs)}</span> : "БЕСПЛАТНО"}
+                        {isShopOnCooldown ? (
+                          <span className="flex items-center justify-center gap-1"><Timer className="h-3.5 w-3.5" />{formatCooldown(shopCooldownRemainingMs)}</span>
+                        ) : (wouldExceedMax || willExceedAbsolute) ? (
+                          "МАКСИМУМ"
+                        ) : (
+                          "БЕСПЛАТНО"
+                        )}
                       </button>
                     </div>
                   );
