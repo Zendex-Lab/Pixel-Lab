@@ -678,13 +678,6 @@ export default function PixelBattleCanvas({
             </button>
           )}
 
-          {isAuthModalOpen && (
-            <AuthModal 
-              onClose={() => setIsAuthModalOpen(false)} 
-              onSuccess={() => setIsAuthModalOpen(false)} 
-            />
-          )}
-
           {/* Palette Toggle Button */}
           <button
             onClick={() => setIsPaletteOpen(!isPaletteOpen)}
@@ -705,6 +698,14 @@ export default function PixelBattleCanvas({
           </div>
         </div>
       </div>
+
+      {/* ==================== AUTH MODAL ==================== */}
+      {isAuthModalOpen && (
+        <AuthModal 
+          onClose={() => setIsAuthModalOpen(false)} 
+          onSuccess={() => setIsAuthModalOpen(false)} 
+        />
+      )}
 
       {/* ==================== SHOP MODAL ==================== */}
       {isShopOpen && (
