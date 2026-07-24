@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pixellab",
+  "compatibility_date": "2026-07-24",
+  "pages_build_output_dir": "./.output/public",
+  "vars": {
+    "VITE_SUPABASE_URL": "https://wtvufewclgdrjmdmbvgb.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0dnVmZXdjbGdkcmptZG1idmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4OTA5NjUsImV4cCI6MjEwMDQ2Njk2NX0.r4oQRxU7kyPi0hcNgbuzcCYuUOgRmiI3RAK9yq32wqU",
+    "SUPABASE_URL": "https://wtvufewclgdrjmdmbvgb.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0dnVmZXdjbGdkcmptZG1idmdiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4OTA5NjUsImV4cCI6MjEwMDQ2Njk2NX0.r4oQRxU7kyPi0hcNgbuzcCYuUOgRmiI3RAK9yq32wqU"
+  }
+}
