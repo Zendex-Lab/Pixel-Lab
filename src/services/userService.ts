@@ -17,5 +17,18 @@ export const userService = {
       .update({ charges, max_charges, last_regen_time: new Date().toISOString() })
       .eq('id', userId);
     if (error) console.error('Error updating charges:', error);
+  },
+
+  async recordShopPurchase(userId: string, charges: number, max_charges: number) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ 
+        charges, 
+        max_charges, 
+        last_regen_time: new Date().toISOString(),
+        last_shop_purchase_at: new Date().toISOString()
+      })
+      .eq('id', userId);
+    if (error) console.error('Error recording shop purchase:', error);
   }
 };

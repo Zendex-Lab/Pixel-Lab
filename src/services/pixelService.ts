@@ -16,6 +16,14 @@ export const pixelService = {
     if (error) console.error('Error placing pixel:', error);
   },
 
+  async placePixelsBatch(pixels: {x: number, y: number, color_idx: number}[], userId: string) {
+    const payload = pixels.map(p => ({ ...p, updated_by: userId }));
+    const { error } = await supabase
+      .from('pixels')
+      .upsert(payload);
+    if (error) console.error('Error placing batch pixels:', error);
+  },
+
   subscribeToPixels(onUpdate: (payload: { x: number, y: number, color_idx: number }) => void) {
     const channel = supabase.channel('public:pixels')
       .on(
