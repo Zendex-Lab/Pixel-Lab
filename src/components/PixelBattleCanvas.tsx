@@ -816,7 +816,7 @@ export default function PixelBattleCanvas({
           </div>
           <div className="pl-3 sm:pl-4 border-l border-[var(--glass-border)] text-center text-[var(--muted-foreground)] hidden lg:block">
             <Info className="h-3 w-3 sm:h-4 sm:w-4 mx-auto mb-0.5 text-[var(--primary)]"/>
-            <div className="text-[10px] leading-tight">wplace<br/>v0.6</div>
+            <div className="text-[10px] leading-tight">Pixel Lab<br/>v0.6</div>
           </div>
         </div>
       </div>
