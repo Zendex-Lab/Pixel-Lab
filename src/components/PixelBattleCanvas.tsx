@@ -180,30 +180,6 @@ export default function PixelBattleCanvas({
   }, [msUntilNextCharge]);
 
   // ==========================================================================
-  // Pixel Placement Logic
-  // ==========================================================================
-  const tryPlacePixel = useCallback((gridX: number, gridY: number) => {
-    if (chargesRef.current <= 0) return false;
-    if (gridX < 0 || gridY < 0 || gridX >= width || gridY >= height) return false;
-
-    const idx = gridY * width + gridX;
-    if (pixelDataRef.current[idx] === selectedColorIndex) return false;
-
-    pixelDataRef.current[idx] = selectedColorIndex;
-    const offCtx = offscreenCtxRef.current;
-    if (offCtx) {
-      const single = offCtx.createImageData(1, 1);
-      const data32 = new Uint32Array(single.data.buffer);
-      data32[0] = PALETTE_RGBA[selectedColorIndex];
-      offCtx.putImageData(single, gridX, gridY);
-    }
-
-    setCharges(prev => Math.max(0, prev - 1));
-    dirtyRef.current = true;
-    return true;
-  }, [width, height, selectedColorIndex]);
-
-  // ==========================================================================
   // Canvas Rendering & Loop
   // ==========================================================================
   useEffect(() => {
