@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { authService } from "../services/authService";
+import { pixelService } from "../services/pixelService";
+import { userService } from "../services/userService";
+import AuthModal from "./AuthModal";
+import type { Session } from "@supabase/supabase-js";
 import { 
   Palette, 
   MousePointer2, 
@@ -117,6 +123,11 @@ export default function PixelBattleCanvas({
 
   // --- Palette State ---
   const [selectedColorIndex, setSelectedColorIndex] = useState(4); // orange
+
+  // --- Auth & User State ---
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [profile, setProfile] = useState<{username: string} | null>(null);
 
   // ==========================================================================
   // Theme Switching Logic
@@ -413,6 +424,137 @@ export default function PixelBattleCanvas({
     dirtyRef.current = true;
     if (scaleLabelRef.current) { scaleLabelRef.current.textContent = `${Math.round(newScale * 100)}%`; }
   }, []);
+  
+  // ==========================================================================
+  // Auth & Profile Init
+  // ==========================================================================
+  useEffect(() => {
+    authService.getSession().then((sess) => {
+      setSession(sess);
+      if (sess?.user) loadUserProfile(sess.user.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess);
+      if (sess?.user) {
+        loadUserProfile(sess.user.id);
+        setIsAuthModalOpen(false);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    const data = await userService.getProfile(userId);
+    if (data) {
+      setProfile({ username: data.username });
+      setCharges(data.charges);
+      setMaxCharges(data.max_charges);
+    }
+  };
+
+  // ==========================================================================
+  // Throttle (Задержка) сохранения зарядов
+  // ==========================================================================
+  const saveChargesTimeout = useRef<NodeJS.Timeout | null>(null);
+  const triggerChargeSave = useCallback((currentCharges: number) => {
+    if (!session?.user) return;
+    if (saveChargesTimeout.current) clearTimeout(saveChargesTimeout.current);
+    saveChargesTimeout.current = setTimeout(() => {
+      userService.updateCharges(session.user.id, currentCharges, maxChargesRef.current);
+    }, 2000); // Сохраняем в БД спустя 2 секунды бездействия
+  }, [session]);
+
+
+  // ==========================================================================
+  // Загрузка пикселей и Realtime Sync
+  // ==========================================================================
+  useEffect(() => {
+    // 1. Инициализация Offscreen Canvas (выполняется 1 раз)
+    const offCanvas = document.createElement("canvas");
+    offCanvas.width = width;
+    offCanvas.height = height;
+    const offCtx = offCanvas.getContext("2d", { willReadFrequently: false });
+    if (!offCtx) return;
+
+    offscreenCanvasRef.current = offCanvas;
+    offscreenCtxRef.current = offCtx;
+
+    // Заливаем фон
+    const imageData = offCtx.createImageData(width, height);
+    const data32 = new Uint32Array(imageData.data.buffer);
+    data32.fill(PALETTE_RGBA[0]); 
+    pixelDataRef.current.fill(0);
+    offCtx.putImageData(imageData, 0, 0);
+
+    // 2. Загрузка из БД
+    pixelService.loadAllPixels().then((dbPixels) => {
+      dbPixels.forEach(({ x, y, color_idx }) => {
+        const idx = y * width + x;
+        pixelDataRef.current[idx] = color_idx;
+        
+        // Отрисовка на offscreen
+        const single = offCtx.createImageData(1, 1);
+        new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx];
+        offCtx.putImageData(single, x, y);
+      });
+      dirtyRef.current = true;
+    });
+
+    // 3. Подписка на Realtime (чужие пиксели)
+    const unsubscribe = pixelService.subscribeToPixels(({ x, y, color_idx }) => {
+      const idx = y * width + x;
+      pixelDataRef.current[idx] = color_idx;
+      
+      const single = offCtx.createImageData(1, 1);
+      new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx];
+      offCtx.putImageData(single, x, y);
+      
+      dirtyRef.current = true;
+    });
+
+    return () => unsubscribe();
+  }, [width, height]);
+
+
+  // ==========================================================================
+  // Измененная логика размещения пикселя
+  // ==========================================================================
+  const tryPlacePixel = useCallback((gridX: number, gridY: number) => {
+    if (!session) {
+      setIsAuthModalOpen(true);
+      return false;
+    }
+    
+    if (chargesRef.current <= 0) return false;
+    if (gridX < 0 || gridY < 0 || gridX >= width || gridY >= height) return false;
+
+    const idx = gridY * width + gridX;
+    if (pixelDataRef.current[idx] === selectedColorIndex) return false;
+
+    // Оптимистичное обновление UI
+    pixelDataRef.current[idx] = selectedColorIndex;
+    const offCtx = offscreenCtxRef.current;
+    if (offCtx) {
+      const single = offCtx.createImageData(1, 1);
+      const data32 = new Uint32Array(single.data.buffer);
+      data32[0] = PALETTE_RGBA[selectedColorIndex];
+      offCtx.putImageData(single, gridX, gridY);
+    }
+
+    const newCharges = chargesRef.current - 1;
+    setCharges(Math.max(0, newCharges));
+    dirtyRef.current = true;
+
+    // Асинхронно отправляем в БД
+    pixelService.placePixel(gridX, gridY, selectedColorIndex, session.user.id);
+    triggerChargeSave(newCharges);
+
+    return true;
+  }, [width, height, selectedColorIndex, session, triggerChargeSave]);
 
   const regenProgressFactor = (CHARGE_REGEN_MS - msUntilNextCharge) / CHARGE_REGEN_MS;
 
@@ -558,7 +700,29 @@ export default function PixelBattleCanvas({
               />
             </div>
           </div>
-
+            {/* кнопка авторизации */}
+        {session ? (
+          <button 
+            onClick={() => authService.signOut()} 
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--destructive)]/20 border border-[var(--glass-border)] transition-all"
+          >
+            <span className="text-sm font-medium">{profile?.username}</span>
+            <span className="text-xs text-[var(--muted-foreground)]">(Выйти)</span>
+          </button>
+        ) : (
+          <button 
+            onClick={() => setIsAuthModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-95 transition-all"
+          >
+            <span className="text-sm font-bold">Войти / Регистрация</span>
+          </button>
+        )}
+      {isAuthModalOpen && (
+        <AuthModal 
+          onClose={() => setIsAuthModalOpen(false)} 
+          onSuccess={() => setIsAuthModalOpen(false)} 
+        />
+      )}
           {/* Palette Toggle Button */}
           <button
             onClick={() => setIsPaletteOpen(!isPaletteOpen)}
