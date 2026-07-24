@@ -30,5 +30,31 @@ export const userService = {
       })
       .eq('id', userId);
     if (error) console.error('Error recording shop purchase:', error);
+  },
+
+  // ===== ADMIN METHODS =====
+
+  async updateAdminUserStats(targetUserId: string, charges: number, max_charges: number) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ charges, max_charges })
+      .eq('id', targetUserId);
+    if (error) {
+      console.error('Error updating admin stats:', error);
+      return false;
+    }
+    return true;
+  },
+
+  async resetShopCooldown(targetUserId: string) {
+    const { error } = await supabase
+      .from('user_profiles')
+      .update({ last_shop_purchase_at: null })
+      .eq('id', targetUserId);
+    if (error) {
+      console.error('Error resetting shop cooldown:', error);
+      return false;
+    }
+    return true;
   }
 };

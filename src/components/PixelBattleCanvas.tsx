@@ -4,27 +4,13 @@ import { authService } from "../services/authService";
 import { pixelService } from "../services/pixelService";
 import { userService } from "../services/userService";
 import AuthModal from "./AuthModal";
+import SettingsModal from "./SettingsModal";
+import AdminModal from "./AdminModal";
 import type { Session } from "@supabase/supabase-js";
 import { 
-  Palette, 
-  MousePointer2, 
-  ZoomIn, 
-  ZoomOut, 
-  Move, 
-  Zap, 
-  Info, 
-  Sun, 
-  Moon, 
-  ShoppingBag, 
-  X, 
-  PlusCircle, 
-  BatteryCharging,
-  Timer,
-  TrendingUp,
-  Eraser,
-  Check,
-  Trash2,
-  User
+  Palette, MousePointer2, ZoomIn, ZoomOut, Move, Zap, 
+  Info, ShoppingBag, X, PlusCircle, BatteryCharging,
+  Timer, TrendingUp, Eraser, Check, Trash2, User, Settings, Shield
 } from "lucide-react";
 
 // ============================================================================
@@ -42,7 +28,7 @@ const GRID_LINES_VISIBLE_FROM_SCALE = 8;
 const MAX_CHARGES_GROWTH_PER_PIXEL = 1;
 const LIMIT_UPGRADE_STEP = 50;
 const CHARGE_PACKS = [50, 100, 200] as const;
-const SHOP_COOLDOWN_MS = 5 * 60 * 1000; // 5 минут
+const SHOP_COOLDOWN_MS = 5 * 60 * 1000; 
 
 const PALETTE_HEX: string[] = [
   "#FFFFFF", "#D4D7D9", "#898D90", "#000000",
@@ -98,7 +84,7 @@ export default function PixelBattleCanvas({
   const transformRef = useRef<ViewTransform>({ scale: 4, offsetX: 0, offsetY: 0 });
   const dirtyRef = useRef(true);
 
-  // --- Draft State (Черновики) ---
+  // --- Draft State ---
   const pendingPixelsRef = useRef<Map<string, { x: number, y: number, color_idx: number }>>(new Map());
   const [pendingCount, setPendingCount] = useState(0);
   const [isEraserMode, setIsEraserMode] = useState(false);
@@ -114,12 +100,17 @@ export default function PixelBattleCanvas({
   const coordsLabelRef = useRef<HTMLSpanElement>(null);
   const scaleLabelRef = useRef<HTMLSpanElement>(null);
 
-  // --- UI State ---
+  // --- UI & Modal State ---
   const [isDark, setIsDark] = useState(true);
+  const [showGrid, setShowGrid] = useState(true);
+  const showGridRef = useRef(showGrid);
+  
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [selectedColorIndex, setSelectedColorIndex] = useState(4); // orange
+  const [selectedColorIndex, setSelectedColorIndex] = useState(4); 
 
   // --- Charges System State ---
   const [maxCharges, setMaxCharges] = useState(INITIAL_MAX_CHARGES);
@@ -133,7 +124,7 @@ export default function PixelBattleCanvas({
   // --- Auth & User State ---
   const [session, setSession] = useState<Session | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [profile, setProfile] = useState<{username: string} | null>(null);
+  const [profile, setProfile] = useState<{username: string, is_admin: boolean} | null>(null);
 
   // --- Shop Cooldown State ---
   const [shopCooldownEnd, setShopCooldownEnd] = useState<number>(0);
@@ -155,7 +146,6 @@ export default function PixelBattleCanvas({
     return { gridX, gridY, inBounds: gridX >= 0 && gridY >= 0 && gridX < width && gridY < height };
   }, [width, height]);
 
-  // Размещение пикселя в черновик (или стирание из черновика)
   const handleDraftAction = useCallback((gridX: number, gridY: number) => {
     if (!session) {
       setIsAuthModalOpen(true);
@@ -184,7 +174,7 @@ export default function PixelBattleCanvas({
       
       const isNew = !pendingPixelsRef.current.has(key);
       if (isNew && pendingPixelsRef.current.size >= chargesRef.current) {
-         return false; // Недостаточно зарядов для нового черновика
+         return false; 
       }
       
       pendingPixelsRef.current.set(key, { x: gridX, y: gridY, color_idx: selectedColorIndex });
@@ -195,14 +185,12 @@ export default function PixelBattleCanvas({
     }
   }, [isEraserMode, session, width, height, selectedColorIndex]);
 
-  // Подтверждение и пакетная отправка
   const handleConfirmDrafts = useCallback(() => {
     if (!session || pendingPixelsRef.current.size === 0) return;
     
     const drafts = Array.from(pendingPixelsRef.current.values());
     const count = drafts.length;
     
-    // Оптимистичное обновление
     const offCtx = offscreenCtxRef.current;
     if (offCtx) {
       drafts.forEach(({ x, y, color_idx }) => {
@@ -214,7 +202,6 @@ export default function PixelBattleCanvas({
       });
     }
     
-    // Обновление зарядов с учетом прогрессивного лимита
     const newCharges = Math.max(0, chargesRef.current - count);
     const newMaxCharges = maxChargesRef.current + (count * MAX_CHARGES_GROWTH_PER_PIXEL);
     
@@ -228,7 +215,6 @@ export default function PixelBattleCanvas({
     dirtyRef.current = true;
     setIsEraserMode(false);
     
-    // Отправка в БД
     pixelService.placePixelsBatch(drafts, session.user.id);
     userService.updateCharges(session.user.id, newCharges, newMaxCharges);
   }, [session, width]);
@@ -397,6 +383,11 @@ export default function PixelBattleCanvas({
   }, [isDark]);
 
   useEffect(() => {
+    showGridRef.current = showGrid;
+    dirtyRef.current = true;
+  }, [showGrid]);
+
+  useEffect(() => {
     chargesRef.current = charges;
     maxChargesRef.current = maxCharges;
   }, [charges, maxCharges]);
@@ -462,7 +453,6 @@ export default function PixelBattleCanvas({
     const render = () => {
       rafId = requestAnimationFrame(render);
       
-      // Форсируем перерисовку, если есть черновики для анимации мерцания
       let isDirty = dirtyRef.current;
       if (pendingPixelsRef.current.size > 0) isDirty = true;
 
@@ -488,7 +478,7 @@ export default function PixelBattleCanvas({
       
       ctx.drawImage(off, 0, 0);
 
-      // --- Рендер черновиков с мерцанием ---
+      // --- Рендер черновиков ---
       if (pendingPixelsRef.current.size > 0) {
         const time = Date.now();
         const alpha = 0.5 + 0.3 * Math.sin(time / 150);
@@ -502,7 +492,7 @@ export default function PixelBattleCanvas({
       }
 
       // --- Сетка ---
-      if (scale >= GRID_LINES_VISIBLE_FROM_SCALE) {
+      if (showGridRef.current && scale >= GRID_LINES_VISIBLE_FROM_SCALE) {
         ctx.strokeStyle = "oklch(from var(--border) l c h / 0.15)";
         ctx.lineWidth = 1 / scale;
         ctx.beginPath();
@@ -549,6 +539,27 @@ export default function PixelBattleCanvas({
     };
   }, []);
 
+  const loadUserProfile = async (userId: string) => {
+    const data = await userService.getProfile(userId);
+    if (data) {
+      setProfile({ username: data.username, is_admin: data.is_admin });
+      setCharges(data.charges);
+      setMaxCharges(data.max_charges);
+      
+      if (data.last_shop_purchase_at) {
+        const lastPurchase = new Date(data.last_shop_purchase_at).getTime();
+        const end = lastPurchase + SHOP_COOLDOWN_MS;
+        if (end > Date.now()) {
+          setShopCooldownEnd(end);
+        } else {
+          setShopCooldownEnd(0);
+        }
+      } else {
+        setShopCooldownEnd(0);
+      }
+    }
+  };
+
   useEffect(() => {
     authService.getSession().then((sess) => {
       setSession(sess);
@@ -567,21 +578,6 @@ export default function PixelBattleCanvas({
 
     return () => subscription.unsubscribe();
   }, []);
-
-  const loadUserProfile = async (userId: string) => {
-    const data = await userService.getProfile(userId);
-    if (data) {
-      setProfile({ username: data.username });
-      setCharges(data.charges);
-      setMaxCharges(data.max_charges);
-      
-      if (data.last_shop_purchase_at) {
-        const lastPurchase = new Date(data.last_shop_purchase_at).getTime();
-        const end = lastPurchase + SHOP_COOLDOWN_MS;
-        if (end > Date.now()) setShopCooldownEnd(end);
-      }
-    }
-  };
 
   useEffect(() => {
     pixelService.loadAllPixels().then((dbPixels) => {
@@ -630,7 +626,6 @@ export default function PixelBattleCanvas({
           onContextMenu={(e) => e.preventDefault()}
         />
 
-        {/* HUD: Left Info Pill */}
         <div className="pointer-events-none absolute top-4 left-4 glass flex items-center gap-3 px-3.5 py-2 text-xs font-mono text-[var(--foreground)]">
           <span className="flex items-center gap-1.5 border-r border-[var(--glass-border)] pr-3">
             <MousePointer2 className="h-4 w-4 text-[var(--muted-foreground)]" />
@@ -642,8 +637,7 @@ export default function PixelBattleCanvas({
           </span>
         </div>
 
-        {/* HUD: Right Controls Info */}
-        <div className="pointer-events-none absolute top-4 right-4 glass flex items-center gap-2 px-3.5 py-2 text-xs text-[var(--muted-foreground)]">
+        <div className="pointer-events-none absolute top-4 right-4 glass flex items-center gap-2 px-3.5 py-2 text-xs text-[var(--muted-foreground)] hidden sm:flex">
           <Move className="h-4 w-4" />
           <span>Колесо — зум · ЛКМ/СКМ перемещение · <span className="text-[var(--primary)] font-medium">Shift+Drag — рисовать</span></span>
         </div>
@@ -653,45 +647,45 @@ export default function PixelBattleCanvas({
           <button onClick={() => zoomBy(1.4)} className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors" title="Приблизить">
             <ZoomIn className="h-5 w-5" />
           </button>
-          
           <div className="h-px w-full bg-[var(--glass-border)]" />
-          
           <button onClick={() => zoomBy(1 / 1.4)} className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors" title="Отдалить">
             <ZoomOut className="h-5 w-5" />
           </button>
-
           <div className="h-px w-full bg-[var(--glass-border)]" />
-
-          <button onClick={() => setIsDark(!isDark)} className="p-3 text-[var(--accent)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors" title={isDark ? "Включить светлую тему" : "Включить тёмную тему"}>
-            {isDark ? <Sun className="h-5 w-5 text-amber-400" /> : <Moon className="h-5 w-5 text-indigo-600" />}
+          <button onClick={() => setIsSettingsOpen(true)} className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors" title="Настройки">
+            <Settings className="h-5 w-5" />
           </button>
-
           <div className="h-px w-full bg-[var(--glass-border)]" />
-
-          <button onClick={() => setIsShopOpen(true)} className="p-3 text-[var(--primary)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors relative" title="Магазин зарядов">
+          <button onClick={() => setIsShopOpen(true)} className="p-3 text-[var(--primary)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors relative" title="Магазин">
             <ShoppingBag className="h-5 w-5" />
             {!isShopOnCooldown && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--accent)] animate-ping" />}
           </button>
-
           <div className="h-px w-full bg-[var(--glass-border)]" />
-
-          <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors relative" title="Профиль">
+          <button onClick={() => setIsProfileOpen(!isProfileOpen)} className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors" title="Профиль">
             <User className={`h-5 w-5 ${session ? 'text-[var(--primary)]' : ''}`} />
           </button>
         </div>
 
         {/* Profile Popover */}
         {isProfileOpen && (
-          <div className="absolute right-[4.5rem] bottom-24 glass-strong p-4 rounded-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col gap-3 min-w-[150px] animate-in fade-in slide-in-from-right-4 duration-200 z-20">
+          <div className="absolute right-[4.5rem] bottom-24 glass-strong p-4 rounded-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col gap-3 min-w-[160px] animate-in fade-in slide-in-from-right-4 duration-200 z-20">
             {session ? (
               <>
                 <div className="flex items-center gap-2 border-b border-[var(--glass-border)] pb-2 mb-1">
                   <User className="h-4 w-4 text-[var(--primary)]" />
                   <span className="font-bold text-sm truncate">{profile?.username}</span>
                 </div>
+                {profile?.is_admin && (
+                  <button 
+                    onClick={() => { setIsAdminOpen(true); setIsProfileOpen(false); }} 
+                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-colors text-left"
+                  >
+                    <Shield className="h-4 w-4" /> Админ-панель
+                  </button>
+                )}
                 <button 
                   onClick={() => { authService.signOut(); setIsProfileOpen(false); }} 
-                  className="text-xs text-[var(--muted-foreground)] hover:text-[var(--destructive)] transition-colors text-left font-medium"
+                  className="px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 rounded-lg transition-colors text-left font-medium"
                 >
                   Выйти из аккаунта
                 </button>
@@ -713,8 +707,6 @@ export default function PixelBattleCanvas({
 
       {/* ==================== BOTTOM FLOATING BAR ==================== */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none flex flex-col items-center gap-3">
-        
-        {/* Color Palette Popover Dropdown */}
         {isPaletteOpen && (
           <div className="pointer-events-auto w-full max-w-[320px] glass-strong p-4 rounded-2xl shadow-2xl border border-[var(--glass-border)] animate-in fade-in slide-in-from-bottom-3 duration-200">
             <div className="flex items-center justify-between mb-3 border-b border-[var(--glass-border)] pb-2">
@@ -742,8 +734,6 @@ export default function PixelBattleCanvas({
         )}
 
         <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg">
-          
-          {/* Charges Indicator */}
           <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
             <div className="flex items-center justify-between gap-2">
               <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
@@ -751,13 +741,10 @@ export default function PixelBattleCanvas({
                 Заряды
               </span>
               <span className="font-retro8bit text-base sm:text-lg font-bold" style={{ fontFamily: 'var(--font-display)' }}>
-                {pendingCount > 0 
-                  ? <span className="text-amber-400">{charges - pendingCount}</span> 
-                  : charges === maxCharges ? "MAX" : charges}
+                {pendingCount > 0 ? <span className="text-amber-400">{charges - pendingCount}</span> : charges === maxCharges ? "MAX" : charges}
                 <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">/ {maxCharges}</span>
               </span>
             </div>
-            
             <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
               <div 
                 className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? "border-animated-rainbow" : "bg-[var(--accent)]"}`}
@@ -766,7 +753,6 @@ export default function PixelBattleCanvas({
             </div>
           </div>
 
-          {/* Tools: Palette & Eraser */}
           <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
             <button
               onClick={() => setIsPaletteOpen(!isPaletteOpen)}
@@ -776,13 +762,10 @@ export default function PixelBattleCanvas({
               <span className="text-sm font-medium hidden sm:inline">Палитра</span>
               <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner" style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }} />
             </button>
-
             <button
               onClick={() => setIsEraserMode(!isEraserMode)}
               className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
-                isEraserMode 
-                  ? "border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]" 
-                  : "border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]"
+                isEraserMode ? "border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]" : "border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]"
               }`}
               title="Ластик (стирает черновики)"
             >
@@ -790,7 +773,6 @@ export default function PixelBattleCanvas({
             </button>
           </div>
 
-          {/* Draft Confirm Actions */}
           <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
             {pendingCount > 0 ? (
               <>
@@ -810,22 +792,34 @@ export default function PixelBattleCanvas({
                 </button>
               </>
             ) : (
-               <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
-                 Нарисуйте пиксели,<br/>чтобы подтвердить
-               </span>
+               <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">Нарисуйте пиксели,<br/>чтобы подтвердить</span>
             )}
           </div>
-
-          {/* Info Badge */}
           <div className="pl-3 sm:pl-4 border-l border-[var(--glass-border)] text-center text-[var(--muted-foreground)] hidden lg:block">
             <Info className="h-3 w-3 sm:h-4 sm:w-4 mx-auto mb-0.5 text-[var(--primary)]"/>
-            <div className="text-[10px] leading-tight">wplace<br/>v0.4</div>
+            <div className="text-[10px] leading-tight">wplace<br/>v0.5</div>
           </div>
         </div>
       </div>
 
       {/* ==================== MODALS ==================== */}
       {isAuthModalOpen && <AuthModal onClose={() => setIsAuthModalOpen(false)} onSuccess={() => setIsAuthModalOpen(false)} />}
+      
+      {isSettingsOpen && (
+        <SettingsModal 
+          onClose={() => setIsSettingsOpen(false)} 
+          isDark={isDark} setIsDark={setIsDark} 
+          showGrid={showGrid} setShowGrid={setShowGrid} 
+        />
+      )}
+
+      {isAdminOpen && profile?.is_admin && session && (
+        <AdminModal 
+          onClose={() => setIsAdminOpen(false)} 
+          currentUserId={session.user.id} 
+          onSuccess={() => loadUserProfile(session.user.id)}
+        />
+      )}
 
       {isShopOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
@@ -905,7 +899,7 @@ export default function PixelBattleCanvas({
             </div>
 
             <div className="mt-6 text-center text-xs text-[var(--muted-foreground)]">
-              {!session ? "Авторизуйтесь, чтобы совершать покупки" : "На этапе бета-тестирования все улучшения бесплатны. После покупки магазин перезаряжается 5 минут."}
+              {!session ? "Авторизуйтесь, чтобы совершать покупки" : "После покупки магазин перезаряжается 5 минут."}
             </div>
           </div>
         </div>
