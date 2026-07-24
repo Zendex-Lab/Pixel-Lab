@@ -130,142 +130,8 @@ export default function PixelBattleCanvas({
   const [profile, setProfile] = useState<{username: string} | null>(null);
 
   // ==========================================================================
-  // Theme Switching Logic
+  // Helper Functions & Business Logic (Объявляем ДО их вызова в обработчиках!)
   // ==========================================================================
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDark]);
-
-  // ==========================================================================
-  // Charges Regeneration Logic
-  // ==========================================================================
-  useEffect(() => {
-    chargesRef.current = charges;
-    maxChargesRef.current = maxCharges;
-  }, [charges, maxCharges]);
-
-  useEffect(() => {
-    let rafId: number;
-    
-    const updateCharges = () => {
-      rafId = requestAnimationFrame(updateCharges);
-      
-      if (chargesRef.current >= maxChargesRef.current) {
-        if (msUntilNextCharge !== 0) setMsUntilNextCharge(0);
-        lastChargeRegenTimeRef.current = Date.now();
-        return;
-      }
-
-      const now = Date.now();
-      const delta = now - lastChargeRegenTimeRef.current;
-      
-      if (delta >= CHARGE_REGEN_MS) {
-        const gainedCharges = Math.floor(delta / CHARGE_REGEN_MS);
-        const newCharges = Math.min(maxChargesRef.current, chargesRef.current + gainedCharges);
-        
-        setCharges(newCharges);
-        lastChargeRegenTimeRef.current = now - (delta % CHARGE_REGEN_MS);
-        setMsUntilNextCharge(CHARGE_REGEN_MS - (delta % CHARGE_REGEN_MS));
-      } else {
-        setMsUntilNextCharge(CHARGE_REGEN_MS - delta);
-      }
-    };
-
-    rafId = requestAnimationFrame(updateCharges);
-    return () => cancelAnimationFrame(rafId);
-  }, [msUntilNextCharge]);
-
-  // ==========================================================================
-  // Canvas Rendering & Loop
-  // ==========================================================================
-  useEffect(() => {
-    const offCanvas = document.createElement("canvas");
-    offCanvas.width = width;
-    offCanvas.height = height;
-    const offCtx = offCanvas.getContext("2d", { willReadFrequently: false });
-    if (!offCtx) return;
-
-    offscreenCanvasRef.current = offCanvas;
-    offscreenCtxRef.current = offCtx;
-
-    const imageData = offCtx.createImageData(width, height);
-    const data32 = new Uint32Array(imageData.data.buffer);
-    const bg = PALETTE_RGBA[0]; // white
-    data32.fill(bg);
-    pixelDataRef.current.fill(0);
-    offCtx.putImageData(imageData, 0, 0);
-
-    dirtyRef.current = true;
-  }, [width, height]);
-
-  useEffect(() => {
-    let rafId: number;
-
-    const render = () => {
-      rafId = requestAnimationFrame(render);
-      if (!dirtyRef.current) return;
-
-      const view = viewCanvasRef.current;
-      const off = offscreenCanvasRef.current;
-      if (!view || !off) return;
-
-      const ctx = view.getContext("2d");
-      if (!ctx) return;
-
-      const { scale, offsetX, offsetY } = transformRef.current;
-      const dpr = window.devicePixelRatio || 1;
-
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, view.width, view.height);
-
-      ctx.save();
-      ctx.translate(offsetX, offsetY);
-      ctx.scale(scale, scale);
-      
-      ctx.drawImage(off, 0, 0);
-
-      if (scale >= GRID_LINES_VISIBLE_FROM_SCALE) {
-        ctx.strokeStyle = "oklch(from var(--border) l c h / 0.15)";
-        ctx.lineWidth = 1 / scale;
-        ctx.beginPath();
-        for (let gx = 0; gx <= width; gx++) { ctx.moveTo(gx, 0); ctx.lineTo(gx, height); }
-        for (let gy = 0; gy <= height; gy++) { ctx.moveTo(0, gy); ctx.lineTo(width, gy); }
-        ctx.stroke();
-      }
-
-      ctx.restore();
-      dirtyRef.current = false;
-    };
-
-    rafId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(rafId);
-  }, [width, height]);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    const view = viewCanvasRef.current;
-    if (!container || !view) return;
-
-    const resize = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = container.getBoundingClientRect();
-      view.width = rect.width * dpr;
-      view.height = rect.height * dpr;
-      view.style.width = `${rect.width}px`;
-      view.style.height = `${rect.height}px`;
-      dirtyRef.current = true;
-    };
-
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, []);
 
   const screenToGrid = useCallback((clientX: number, clientY: number) => {
     const view = viewCanvasRef.current;
@@ -282,19 +148,53 @@ export default function PixelBattleCanvas({
     return { gridX, gridY, inBounds: gridX >= 0 && gridY >= 0 && gridX < width && gridY < height };
   }, [width, height]);
 
+  // Throttle сохранения зарядов
+  const saveChargesTimeout = useRef<NodeJS.Timeout | null>(null);
+  const triggerChargeSave = useCallback((currentCharges: number) => {
+    if (!session?.user) return;
+    if (saveChargesTimeout.current) clearTimeout(saveChargesTimeout.current);
+    saveChargesTimeout.current = setTimeout(() => {
+      userService.updateCharges(session.user.id, currentCharges, maxChargesRef.current);
+    }, 2000);
+  }, [session]);
+
+  // Логика размещения пикселя
+  const tryPlacePixel = useCallback((gridX: number, gridY: number) => {
+    if (!session) {
+      setIsAuthModalOpen(true);
+      return false;
+    }
+    
+    if (chargesRef.current <= 0) return false;
+    if (gridX < 0 || gridY < 0 || gridX >= width || gridY >= height) return false;
+
+    const idx = gridY * width + gridX;
+    if (pixelDataRef.current[idx] === selectedColorIndex) return false;
+
+    // Оптимистичное обновление UI
+    pixelDataRef.current[idx] = selectedColorIndex;
+    const offCtx = offscreenCtxRef.current;
+    if (offCtx) {
+      const single = offCtx.createImageData(1, 1);
+      const data32 = new Uint32Array(single.data.buffer);
+      data32[0] = PALETTE_RGBA[selectedColorIndex];
+      offCtx.putImageData(single, gridX, gridY);
+    }
+
+    const newCharges = chargesRef.current - 1;
+    setCharges(Math.max(0, newCharges));
+    dirtyRef.current = true;
+
+    // Асинхронно отправляем в БД
+    pixelService.placePixel(gridX, gridY, selectedColorIndex, session.user.id);
+    triggerChargeSave(newCharges);
+
+    return true;
+  }, [width, height, selectedColorIndex, session, triggerChargeSave]);
+
   // ==========================================================================
-  // Input Handling
+  // Input Handling (Используют tryPlacePixel, созданы ПОСЛЕ неё)
   // ==========================================================================
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Shift") isShiftPressedRef.current = true; };
-    const handleKeyUp = (e: KeyboardEvent) => { if (e.key === "Shift") isShiftPressedRef.current = false; };
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
@@ -400,10 +300,151 @@ export default function PixelBattleCanvas({
     dirtyRef.current = true;
     if (scaleLabelRef.current) { scaleLabelRef.current.textContent = `${Math.round(newScale * 100)}%`; }
   }, []);
-  
+
   // ==========================================================================
-  // Auth & Profile Init
+  // Effects
   // ==========================================================================
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    chargesRef.current = charges;
+    maxChargesRef.current = maxCharges;
+  }, [charges, maxCharges]);
+
+  useEffect(() => {
+    let rafId: number;
+    
+    const updateCharges = () => {
+      rafId = requestAnimationFrame(updateCharges);
+      
+      if (chargesRef.current >= maxChargesRef.current) {
+        if (msUntilNextCharge !== 0) setMsUntilNextCharge(0);
+        lastChargeRegenTimeRef.current = Date.now();
+        return;
+      }
+
+      const now = Date.now();
+      const delta = now - lastChargeRegenTimeRef.current;
+      
+      if (delta >= CHARGE_REGEN_MS) {
+        const gainedCharges = Math.floor(delta / CHARGE_REGEN_MS);
+        const newCharges = Math.min(maxChargesRef.current, chargesRef.current + gainedCharges);
+        
+        setCharges(newCharges);
+        lastChargeRegenTimeRef.current = now - (delta % CHARGE_REGEN_MS);
+        setMsUntilNextCharge(CHARGE_REGEN_MS - (delta % CHARGE_REGEN_MS));
+      } else {
+        setMsUntilNextCharge(CHARGE_REGEN_MS - delta);
+      }
+    };
+
+    rafId = requestAnimationFrame(updateCharges);
+    return () => cancelAnimationFrame(rafId);
+  }, [msUntilNextCharge]);
+
+  useEffect(() => {
+    const offCanvas = document.createElement("canvas");
+    offCanvas.width = width;
+    offCanvas.height = height;
+    const offCtx = offCanvas.getContext("2d", { willReadFrequently: false });
+    if (!offCtx) return;
+
+    offscreenCanvasRef.current = offCanvas;
+    offscreenCtxRef.current = offCtx;
+
+    const imageData = offCtx.createImageData(width, height);
+    const data32 = new Uint32Array(imageData.data.buffer);
+    const bg = PALETTE_RGBA[0]; // white
+    data32.fill(bg);
+    pixelDataRef.current.fill(0);
+    offCtx.putImageData(imageData, 0, 0);
+
+    dirtyRef.current = true;
+  }, [width, height]);
+
+  useEffect(() => {
+    let rafId: number;
+
+    const render = () => {
+      rafId = requestAnimationFrame(render);
+      if (!dirtyRef.current) return;
+
+      const view = viewCanvasRef.current;
+      const off = offscreenCanvasRef.current;
+      if (!view || !off) return;
+
+      const ctx = view.getContext("2d");
+      if (!ctx) return;
+
+      const { scale, offsetX, offsetY } = transformRef.current;
+      const dpr = window.devicePixelRatio || 1;
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, view.width, view.height);
+
+      ctx.save();
+      ctx.translate(offsetX, offsetY);
+      ctx.scale(scale, scale);
+      
+      ctx.drawImage(off, 0, 0);
+
+      if (scale >= GRID_LINES_VISIBLE_FROM_SCALE) {
+        ctx.strokeStyle = "oklch(from var(--border) l c h / 0.15)";
+        ctx.lineWidth = 1 / scale;
+        ctx.beginPath();
+        for (let gx = 0; gx <= width; gx++) { ctx.moveTo(gx, 0); ctx.lineTo(gx, height); }
+        for (let gy = 0; gy <= height; gy++) { ctx.moveTo(0, gy); ctx.lineTo(width, gy); }
+        ctx.stroke();
+      }
+
+      ctx.restore();
+      dirtyRef.current = false;
+    };
+
+    rafId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(rafId);
+  }, [width, height]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    const view = viewCanvasRef.current;
+    if (!container || !view) return;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = container.getBoundingClientRect();
+      view.width = rect.width * dpr;
+      view.height = rect.height * dpr;
+      view.style.width = `${rect.width}px`;
+      view.style.height = `${rect.height}px`;
+      dirtyRef.current = true;
+    };
+
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === "Shift") isShiftPressedRef.current = true; };
+    const handleKeyUp = (e: KeyboardEvent) => { if (e.key === "Shift") isShiftPressedRef.current = false; };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
   useEffect(() => {
     authService.getSession().then((sess) => {
       setSession(sess);
@@ -432,24 +473,7 @@ export default function PixelBattleCanvas({
     }
   };
 
-  // ==========================================================================
-  // Throttle (Задержка) сохранения зарядов
-  // ==========================================================================
-  const saveChargesTimeout = useRef<NodeJS.Timeout | null>(null);
-  const triggerChargeSave = useCallback((currentCharges: number) => {
-    if (!session?.user) return;
-    if (saveChargesTimeout.current) clearTimeout(saveChargesTimeout.current);
-    saveChargesTimeout.current = setTimeout(() => {
-      userService.updateCharges(session.user.id, currentCharges, maxChargesRef.current);
-    }, 2000); // Сохраняем в БД спустя 2 секунды бездействия
-  }, [session]);
-
-
-  // ==========================================================================
-  // Загрузка пикселей и Realtime Sync
-  // ==========================================================================
   useEffect(() => {
-    // 1. Инициализация Offscreen Canvas (выполняется 1 раз)
     const offCanvas = document.createElement("canvas");
     offCanvas.width = width;
     offCanvas.height = height;
@@ -459,20 +483,17 @@ export default function PixelBattleCanvas({
     offscreenCanvasRef.current = offCanvas;
     offscreenCtxRef.current = offCtx;
 
-    // Заливаем фон
     const imageData = offCtx.createImageData(width, height);
     const data32 = new Uint32Array(imageData.data.buffer);
     data32.fill(PALETTE_RGBA[0]); 
     pixelDataRef.current.fill(0);
     offCtx.putImageData(imageData, 0, 0);
 
-    // 2. Загрузка из БД
     pixelService.loadAllPixels().then((dbPixels) => {
       dbPixels.forEach(({ x, y, color_idx }) => {
         const idx = y * width + x;
         pixelDataRef.current[idx] = color_idx;
         
-        // Отрисовка на offscreen
         const single = offCtx.createImageData(1, 1);
         new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx];
         offCtx.putImageData(single, x, y);
@@ -480,7 +501,6 @@ export default function PixelBattleCanvas({
       dirtyRef.current = true;
     });
 
-    // 3. Подписка на Realtime (чужие пиксели)
     const unsubscribe = pixelService.subscribeToPixels(({ x, y, color_idx }) => {
       const idx = y * width + x;
       pixelDataRef.current[idx] = color_idx;
@@ -494,43 +514,6 @@ export default function PixelBattleCanvas({
 
     return () => unsubscribe();
   }, [width, height]);
-
-
-  // ==========================================================================
-  // Измененная логика размещения пикселя
-  // ==========================================================================
-  const tryPlacePixel = useCallback((gridX: number, gridY: number) => {
-    if (!session) {
-      setIsAuthModalOpen(true);
-      return false;
-    }
-    
-    if (chargesRef.current <= 0) return false;
-    if (gridX < 0 || gridY < 0 || gridX >= width || gridY >= height) return false;
-
-    const idx = gridY * width + gridX;
-    if (pixelDataRef.current[idx] === selectedColorIndex) return false;
-
-    // Оптимистичное обновление UI
-    pixelDataRef.current[idx] = selectedColorIndex;
-    const offCtx = offscreenCtxRef.current;
-    if (offCtx) {
-      const single = offCtx.createImageData(1, 1);
-      const data32 = new Uint32Array(single.data.buffer);
-      data32[0] = PALETTE_RGBA[selectedColorIndex];
-      offCtx.putImageData(single, gridX, gridY);
-    }
-
-    const newCharges = chargesRef.current - 1;
-    setCharges(Math.max(0, newCharges));
-    dirtyRef.current = true;
-
-    // Асинхронно отправляем в БД
-    pixelService.placePixel(gridX, gridY, selectedColorIndex, session.user.id);
-    triggerChargeSave(newCharges);
-
-    return true;
-  }, [width, height, selectedColorIndex, session, triggerChargeSave]);
 
   const regenProgressFactor = (CHARGE_REGEN_MS - msUntilNextCharge) / CHARGE_REGEN_MS;
 
@@ -568,7 +551,7 @@ export default function PixelBattleCanvas({
           <span>Колесо — зум · ЛКМ/СКМ перемещение · <span className="text-[var(--primary)] font-medium">Shift+Drag — рисовать</span></span>
         </div>
 
-        {/* HUD: Floating Vertical Toolbar (Zoom + Theme + Shop) */}
+        {/* HUD: Floating Vertical Toolbar */}
         <div className="absolute right-4 bottom-24 glass flex flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] z-20">
           <button 
             onClick={() => zoomBy(1.4)} 
@@ -676,29 +659,32 @@ export default function PixelBattleCanvas({
               />
             </div>
           </div>
-            {/* кнопка авторизации */}
-        {session ? (
-          <button 
-            onClick={() => authService.signOut()} 
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--destructive)]/20 border border-[var(--glass-border)] transition-all"
-          >
-            <span className="text-sm font-medium">{profile?.username}</span>
-            <span className="text-xs text-[var(--muted-foreground)]">(Выйти)</span>
-          </button>
-        ) : (
-          <button 
-            onClick={() => setIsAuthModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-95 transition-all"
-          >
-            <span className="text-sm font-bold">Войти / Регистрация</span>
-          </button>
-        )}
-      {isAuthModalOpen && (
-        <AuthModal 
-          onClose={() => setIsAuthModalOpen(false)} 
-          onSuccess={() => setIsAuthModalOpen(false)} 
-        />
-      )}
+
+          {/* Кнопка авторизации */}
+          {session ? (
+            <button 
+              onClick={() => authService.signOut()} 
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--destructive)]/20 border border-[var(--glass-border)] transition-all"
+            >
+              <span className="text-sm font-medium">{profile?.username}</span>
+              <span className="text-xs text-[var(--muted-foreground)]">(Выйти)</span>
+            </button>
+          ) : (
+            <button 
+              onClick={() => setIsAuthModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 active:scale-95 transition-all"
+            >
+              <span className="text-sm font-bold">Войти / Регистрация</span>
+            </button>
+          )}
+
+          {isAuthModalOpen && (
+            <AuthModal 
+              onClose={() => setIsAuthModalOpen(false)} 
+              onSuccess={() => setIsAuthModalOpen(false)} 
+            />
+          )}
+
           {/* Palette Toggle Button */}
           <button
             onClick={() => setIsPaletteOpen(!isPaletteOpen)}
