@@ -744,6 +744,33 @@ export default function PixelBattleCanvas({
     return () => cancelAnimationFrame(rafId)
   }, [msUntilNextCharge])
 
+  const persistCharges = useCallback(() => {
+    if (!session?.user) return
+    userService.updateCharges(
+      session.user.id,
+      chargesRef.current,
+      maxChargesRef.current,
+    )
+  }, [session])
+
+  useEffect(() => {
+    if (!session?.user) return
+    const interval = setInterval(persistCharges, 10000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistCharges()
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', persistCharges)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', persistCharges)
+      persistCharges() // сохранить и при размонтировании компонента
+    }
+  }, [session, persistCharges])
+
   useEffect(() => {
     const offCanvas = document.createElement('canvas')
     offCanvas.width = width
@@ -869,8 +896,28 @@ export default function PixelBattleCanvas({
     const data = await userService.getProfile(userId)
     if (data) {
       setProfile({ username: data.username, is_admin: data.is_admin })
-      setCharges(data.charges)
       setMaxCharges(data.max_charges)
+
+      // Учитываем время, прошедшее с последнего сохранённого тика регена
+      // (например, пока вкладка была закрыта), чтобы не терять заряды.
+      const serverRegenTime = data.last_regen_time
+        ? new Date(data.last_regen_time).getTime()
+        : Date.now()
+      const elapsed = Math.max(0, Date.now() - serverRegenTime)
+      const gainedOffline = Math.floor(elapsed / CHARGE_REGEN_MS)
+      const catchUpCharges = Math.min(
+        data.max_charges,
+        data.charges + gainedOffline,
+      )
+      const remainder = elapsed % CHARGE_REGEN_MS
+
+      lastChargeRegenTimeRef.current =
+        catchUpCharges >= data.max_charges
+          ? Date.now()
+          : Date.now() - remainder
+
+      chargesRef.current = catchUpCharges
+      setCharges(catchUpCharges)
 
       if (data.last_shop_purchase_at) {
         const lastPurchase = new Date(data.last_shop_purchase_at).getTime()
