@@ -10,7 +10,6 @@ const preset = process.env.CF_PAGES
   : process.env.VERCEL
     ? 'vercel'
     : 'node-server'
-
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
   plugins: [
