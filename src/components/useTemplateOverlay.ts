@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { quantizeImageToPalette, QuantizedTemplate } from './quantizeImage'
+import { quantizeImageToPalette, type QuantizedTemplate } from './quantizeImage'
 
 export interface TemplateOverlayState {
   enabled: boolean
