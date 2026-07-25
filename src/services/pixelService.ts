@@ -15,36 +15,29 @@ export const pixelService = {
     return data || [];
   },
 
-  async placePixel(x: number, y: number, color_idx: number, userId: string) {
-    const { error } = await supabase
-      .from('pixels')
-      .upsert(
-        { x, y, color_idx, updated_by: userId, updated_at: new Date().toISOString() },
-        { onConflict: 'x,y' }
-      );
+  async placePixel(x: number, y: number, color_idx: number) {
+    const { error } = await supabase.rpc('place_pixel', {
+      p_x: x,
+      p_y: y,
+      p_color_idx: color_idx,
+    });
 
     if (error) {
       console.error('Error placing pixel:', error);
+      throw error; // фронту важно знать, что чарджей не хватило / запрос отклонён
     }
   },
 
-  async placePixelsBatch(pixels: { x: number; y: number; color_idx: number }[], userId: string) {
+  async placePixelsBatch(pixels: { x: number; y: number; color_idx: number }[], _userId: string) {
     if (!pixels.length) return;
 
-    const payload = pixels.map((p) => ({
-      x: p.x,
-      y: p.y,
-      color_idx: p.color_idx,
-      updated_by: userId,
-      updated_at: new Date().toISOString(),
-    }));
-
-    const { error } = await supabase
-      .from('pixels')
-      .upsert(payload, { onConflict: 'x,y' });
+    const { error } = await supabase.rpc('place_pixels_batch', {
+      p_pixels: pixels,
+    });
 
     if (error) {
       console.error('Error placing pixel batch:', error);
+      throw error;
     }
   },
 
