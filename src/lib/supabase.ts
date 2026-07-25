@@ -141,6 +141,10 @@ const createMockSupabase = () => {
       }
     },
     removeChannel: (channel: any) => {},
+    rpc: async (fnName: string, params?: any) => {
+      // Мок для RPC (place_pixel / place_pixels_batch и т.п.)
+      return { data: null, error: null }
+    },
   }
 
   return mockClient as any
@@ -153,6 +157,11 @@ if (!hasCredentials) {
     '⚠️ Supabase environment variables are missing! Falling back to offline mock client.',
   )
 }
+
+// Экспортируем URL/anon key отдельно — нужны для "ручных" fetch(..., { keepalive: true })
+// в местах, где supabase-js не подходит (например, сохранение на beforeunload).
+export const supabaseUrl = realSupabaseUrl
+export const supabaseAnonKey = realSupabaseAnonKey
 
 export const supabase = hasCredentials
   ? createClient<Database>(realSupabaseUrl, realSupabaseAnonKey)

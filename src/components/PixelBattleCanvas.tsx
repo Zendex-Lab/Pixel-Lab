@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { authService } from '../services/authService'
 import { pixelService } from '../services/pixelService'
 import { userService } from '../services/userService'
@@ -766,23 +766,51 @@ export default function PixelBattleCanvas({
     )
   }, [session])
 
+  // Отдельная версия для beforeunload/visibilitychange=hidden: обычный
+  // supabase-js fetch браузер может оборвать (NS_BINDING_ABORTED) при закрытии
+  // вкладки. fetch(..., { keepalive: true }) браузер гарантированно
+  // отправляет и после выгрузки страницы — но требует ручных заголовков,
+  // поэтому идём напрямую в PostgREST, а не через supabase-js.
+  const persistChargesKeepalive = useCallback(() => {
+    if (!session?.user || !supabaseUrl || !supabaseAnonKey) return
+    try {
+      fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${session.user.id}`, {
+        method: 'PATCH',
+        keepalive: true,
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${session.access_token}`,
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify({
+          charges: chargesRef.current,
+          max_charges: maxChargesRef.current,
+          last_regen_time: new Date().toISOString(),
+        }),
+      })
+    } catch {
+      // keepalive-запрос best-effort: страница всё равно уже закрывается
+    }
+  }, [session])
+
   useEffect(() => {
     if (!session?.user) return
     const interval = setInterval(persistCharges, 10000)
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') persistCharges()
+      if (document.visibilityState === 'hidden') persistChargesKeepalive()
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('beforeunload', persistCharges)
+    window.addEventListener('beforeunload', persistChargesKeepalive)
 
     return () => {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('beforeunload', persistCharges)
-      persistCharges() // сохранить и при размонтировании компонента
+      window.removeEventListener('beforeunload', persistChargesKeepalive)
+      persistCharges() // сохранить и при размонтировании компонента (обычный переход по SPA)
     }
-  }, [session, persistCharges])
+  }, [session, persistCharges, persistChargesKeepalive])
 
   useEffect(() => {
     const offCanvas = document.createElement('canvas')
