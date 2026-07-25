@@ -1,0 +1,15 @@
+BROWSER CONSOLE: [debug] [vite] connecting...
+BROWSER CONSOLE: [debug] [vite] connected.
+BROWSER CONSOLE: [info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+BROWSER CONSOLE: [warning] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+BROWSER CONSOLE: [log] %cLOG%c %cGo to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Flib%2Fsupabase.ts%3A19%3A3%c
+ →  color:#A0A color:#FFF color:#55F color:#FFF 🛠️ Using mock Supabase client for offline/local testing.
+BROWSER CONSOLE: [log] %cLOG%c %cGo to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fservices%2FpixelService.ts%3A5%3A5%c
+ →  color:#A0A color:#FFF color:#55F color:#FFF 🔍 [1. LOAD] Запрашиваем пиксели из базы данных...
+BROWSER CONSOLE: [log] %cLOG%c %cGo to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fservices%2FpixelService.ts%3A66%3A5%c
+ →  color:#A0A color:#FFF color:#55F color:#FFF 📡 [REALTIME] Подключаемся к подписке postgres_changes (таблица pixels)...
+BROWSER CONSOLE: [log] %cLOG%c %cGo to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fservices%2FpixelService.ts%3A17%3A5%c
+ →  color:#A0A color:#FFF color:#55F color:#FFF ✅ [1. LOAD OK] Успешно получено пикселей из БД: 0 []
+BROWSER CONSOLE: [log] %cLOG%c %cGo to Source: http://localhost:3000/__tsd/open-source?source=%2Fsrc%2Fservices%2FpixelService.ts%3A84%3A9%c
+ →  color:#A0A color:#FFF color:#55F color:#FFF 📡 [REALTIME STATUS] Статус подписки: SUBSCRIBED
+Capturing State A screenshot...

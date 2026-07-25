@@ -1,0 +1,101 @@
+
+> dev
+> vite dev --port 3000
+
+ℹ Using vercel-dev emulation in development mode.
+[90m[env-runner][39m [33mVERCEL_OIDC_TOKEN[39m is not set. Run [36mvercel env pull[39m to pull the latest environment variables.
+
+  VITE v8.1.5  ready in 1978 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: use --host to expose
+3:26:51 AM [vite] (client) [optimizer] bundling dependencies...
+LOG /src/lib/supabase.ts:17:3
+ →  ⚠️ Supabase environment variables are missing! { hasUrl: false, hasKey: false }
+Error in renderToReadableStream: Error: supabaseUrl is required.
+    at validateSupabaseUrl (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:431:25)
+    at new SupabaseClient (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:672:19)
+    at createClient (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:911:9)
+    at /app/src/lib/supabase.ts:23:1
+    at ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:1005:3)
+    at ModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1258:59)
+    at ModuleRunner.cachedRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1165:73)
+    at /app/src/components/PixelBattleCanvas.tsx:2:1
+    at ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:1005:3)
+    at ModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1258:59) { componentStack: [Getter] }
+[Client] src/lib/supabase.ts:17:3 ⚠️ Supabase environment variables are missing! { hasUrl: false, hasKey: false }
+[Client] %o
+
+%s
+
+%s
+ {
+  name: 'Error',
+  message: 'supabaseUrl is required.',
+  stack: 'Error: supabaseUrl is required.\n' +
+    '    at validateSupabaseUrl (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20436:25)\n' +
+    '    at new SupabaseClient (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20671:19)\n' +
+    '    at createClient (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20907:9)\n' +
+    '    at http://localhost:3000/src/lib/supabase.ts:16:25'
+} The above error occurred in the <Lazy> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundaryImpl.
+[Client] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute!
+[Client] Warning: supabaseUrl is required.
+Error in renderToReadableStream: Error: supabaseUrl is required.
+    at validateSupabaseUrl (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:431:25)
+    at new SupabaseClient (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:672:19)
+    at createClient (file:///app/node_modules/@supabase/supabase-js/dist/index.mjs:911:9)
+    at /app/src/lib/supabase.ts:23:1
+    at ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:1005:3)
+    at ModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1258:59)
+    at ModuleRunner.cachedRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1165:73)
+    at /app/src/components/PixelBattleCanvas.tsx:2:1
+    at ESModulesEvaluator.runInlinedModule (file:///app/node_modules/vite/dist/node/module-runner.js:1005:3)
+    at ModuleRunner.directRequest (file:///app/node_modules/vite/dist/node/module-runner.js:1258:59) { componentStack: [Getter] }
+[Client] src/lib/supabase.ts:17:3 ⚠️ Supabase environment variables are missing! { hasUrl: false, hasKey: false }
+[Client] %o
+
+%s
+
+%s
+ {
+  name: 'Error',
+  message: 'supabaseUrl is required.',
+  stack: 'Error: supabaseUrl is required.\n' +
+    '    at validateSupabaseUrl (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20436:25)\n' +
+    '    at new SupabaseClient (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20671:19)\n' +
+    '    at createClient (http://localhost:3000/node_modules/.vite/deps/@supabase_supabase-js.js?v=b2d0dced:20907:9)\n' +
+    '    at http://localhost:3000/src/lib/supabase.ts:16:25'
+} The above error occurred in the <Lazy> component. React will try to recreate this component tree from scratch using the error boundary you provided, CatchBoundaryImpl.
+[Client] Warning: The following error wasn't caught by any route! At the very least, consider setting an 'errorComponent' in your RootRoute!
+[Client] Warning: supabaseUrl is required.
+3:30:08 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/PixelBattleCanvas.tsx, /src/components/AuthModal.tsx, /src/components/AdminModal.tsx
+3:30:08 AM [vite] (ssr) page reload src/lib/supabase.ts
+3:30:17 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/PixelBattleCanvas.tsx, /src/components/AuthModal.tsx, /src/components/AdminModal.tsx
+3:30:17 AM [vite] (ssr) page reload src/lib/supabase.ts
+⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+LOG /src/lib/supabase.ts:19:3
+ →  🛠️ Using mock Supabase client for offline/local testing.
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/services/pixelService.ts:5:5 🔍 [1. LOAD] Запрашиваем пиксели из базы данных...
+[Client] src/services/pixelService.ts:66:5 📡 [REALTIME] Подключаемся к подписке postgres_changes (таблица pixels)...
+[Client] src/services/pixelService.ts:17:5 ✅ [1. LOAD OK] Успешно получено пикселей из БД: 0 []
+[Client] src/services/pixelService.ts:84:9 📡 [REALTIME STATUS] Статус подписки: SUBSCRIBED
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/services/pixelService.ts:5:5 🔍 [1. LOAD] Запрашиваем пиксели из базы данных...
+[Client] src/services/pixelService.ts:66:5 📡 [REALTIME] Подключаемся к подписке postgres_changes (таблица pixels)...
+[Client] src/services/pixelService.ts:17:5 ✅ [1. LOAD OK] Успешно получено пикселей из БД: 0 []
+[Client] src/services/pixelService.ts:84:9 📡 [REALTIME STATUS] Статус подписки: SUBSCRIBED
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/services/pixelService.ts:5:5 🔍 [1. LOAD] Запрашиваем пиксели из базы данных...
+[Client] src/services/pixelService.ts:66:5 📡 [REALTIME] Подключаемся к подписке postgres_changes (таблица pixels)...
+[Client] src/services/pixelService.ts:17:5 ✅ [1. LOAD OK] Успешно получено пикселей из БД: 0 []
+[Client] src/services/pixelService.ts:84:9 📡 [REALTIME STATUS] Статус подписки: SUBSCRIBED
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/services/pixelService.ts:5:5 🔍 [1. LOAD] Запрашиваем пиксели из базы данных...
+[Client] src/services/pixelService.ts:66:5 📡 [REALTIME] Подключаемся к подписке postgres_changes (таблица pixels)...
+[Client] src/services/pixelService.ts:17:5 ✅ [1. LOAD OK] Успешно получено пикселей из БД: 0 []
+[Client] src/services/pixelService.ts:84:9 📡 [REALTIME STATUS] Статус подписки: SUBSCRIBED
