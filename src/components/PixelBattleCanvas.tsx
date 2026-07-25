@@ -312,7 +312,10 @@ export default function PixelBattleCanvas({
     setIsEraserMode(false)
 
     pixelService.placePixelsBatch(drafts, session.user.id)
-    userService.updateCharges(session.user.id, newCharges, newMaxCharges)
+    // charges/max_charges больше не пушим напрямую — их теперь атомарно
+    // считает и списывает place_pixels_batch на сервере; клиентские значения
+    // выше — чисто оптимистичные для мгновенного отклика UI и подтянутся к
+    // реальным при следующем persistCharges (sync_charges).
   }, [session, width, profile])
 
   const clearDrafts = useCallback(() => {
@@ -518,56 +521,43 @@ export default function PixelBattleCanvas({
     return `${m}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleBuyLimitUpgrade = useCallback(() => {
-    if (isShopOnCooldown) return
-    let newMaxCharges = maxChargesRef.current + LIMIT_UPGRADE_STEP
+  const handleBuyLimitUpgrade = useCallback(async () => {
+    if (isShopOnCooldown || !session?.user) return
 
-    // Блокировка попытки обойти лимит
-    if (!profile?.is_admin && newMaxCharges > MAX_REGULAR_LIMIT) return
-
-    maxChargesRef.current = newMaxCharges
-    setMaxCharges(newMaxCharges)
-
-    if (session?.user) {
-      userService.recordShopPurchase(
-        session.user.id,
-        chargesRef.current,
-        newMaxCharges,
-      )
-    }
+    // Оптимистичная блокировка UI сразу — сервер всё равно перепроверит и
+    // при ошибке (кулдаун/лимит) состояние надо будет вернуть через reload.
     triggerShopCooldown()
-  }, [isShopOnCooldown, session, triggerShopCooldown, profile])
+
+    try {
+      const result = await userService.buyLimitUpgrade()
+      if (!result) return
+      chargesRef.current = result.charges
+      maxChargesRef.current = result.max_charges
+      setCharges(result.charges)
+      setMaxCharges(result.max_charges)
+    } catch {
+      // Сервер отказал (кулдаун ещё не истёк / лимит превышен) —
+      // подтягиваем актуальное состояние вместо того, чтобы врать в UI.
+      loadUserProfile(session.user.id)
+    }
+  }, [isShopOnCooldown, session, triggerShopCooldown])
 
   const handleBuyChargePack = useCallback(
-    (amount: number) => {
-      if (isShopOnCooldown) return
+    async (amount: number) => {
+      if (isShopOnCooldown || !session?.user) return
 
-      // Блокировка попытки обойти лимит текущих зарядов
-      if (
-        !profile?.is_admin &&
-        chargesRef.current + amount > maxChargesRef.current
-      )
-        return
-      if (!profile?.is_admin && chargesRef.current + amount > MAX_REGULAR_LIMIT)
-        return
-
-      const newCharges = Math.min(
-        maxChargesRef.current,
-        chargesRef.current + amount,
-      )
-      chargesRef.current = newCharges
-      setCharges(newCharges)
-
-      if (session?.user) {
-        userService.recordShopPurchase(
-          session.user.id,
-          newCharges,
-          maxChargesRef.current,
-        )
-      }
       triggerShopCooldown()
+
+      try {
+        const result = await userService.buyChargePack(amount)
+        if (!result) return
+        chargesRef.current = result.charges
+        setCharges(result.charges)
+      } catch {
+        loadUserProfile(session.user.id)
+      }
     },
-    [isShopOnCooldown, session, triggerShopCooldown, profile],
+    [isShopOnCooldown, session, triggerShopCooldown],
   )
 
   // ==========================================================================
@@ -759,11 +749,12 @@ export default function PixelBattleCanvas({
   // вызывался только при трате зарядов (handleConfirmDrafts).
   const persistCharges = useCallback(() => {
     if (!session?.user) return
-    userService.updateCharges(
-      session.user.id,
-      chargesRef.current,
-      maxChargesRef.current,
-    )
+    userService.syncCharges().then(result => {
+      if (!result) return
+      chargesRef.current = result.charges
+      setCharges(result.charges)
+      lastChargeRegenTimeRef.current = new Date(result.last_regen_time).getTime()
+    })
   }, [session])
 
   // Отдельная версия для beforeunload/visibilitychange=hidden: обычный
@@ -774,20 +765,15 @@ export default function PixelBattleCanvas({
   const persistChargesKeepalive = useCallback(() => {
     if (!session?.user || !supabaseUrl || !supabaseAnonKey) return
     try {
-      fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${session.user.id}`, {
-        method: 'PATCH',
+      fetch(`${supabaseUrl}/rest/v1/rpc/sync_charges`, {
+        method: 'POST',
         keepalive: true,
         headers: {
           'Content-Type': 'application/json',
           apikey: supabaseAnonKey,
           Authorization: `Bearer ${session.access_token}`,
-          Prefer: 'return=minimal',
         },
-        body: JSON.stringify({
-          charges: chargesRef.current,
-          max_charges: maxChargesRef.current,
-          last_regen_time: new Date().toISOString(),
-        }),
+        body: '{}',
       })
     } catch {
       // keepalive-запрос best-effort: страница всё равно уже закрывается
