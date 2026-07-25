@@ -312,10 +312,6 @@ export default function PixelBattleCanvas({
     setIsEraserMode(false)
 
     pixelService.placePixelsBatch(drafts, session.user.id)
-    // charges/max_charges больше не пушим напрямую — их теперь атомарно
-    // считает и списывает place_pixels_batch на сервере; клиентские значения
-    // выше — чисто оптимистичные для мгновенного отклика UI и подтянутся к
-    // реальным при следующем persistCharges (sync_charges).
   }, [session, width, profile])
 
   const clearDrafts = useCallback(() => {
@@ -352,7 +348,7 @@ export default function PixelBattleCanvas({
   // ==========================================================================
 
   const handleTouchStart = useCallback(
-    (e: React.TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       e.preventDefault()
       const touches = e.targetTouches
       const view = viewCanvasRef.current
@@ -394,7 +390,7 @@ export default function PixelBattleCanvas({
   )
 
   const handleTouchMove = useCallback(
-    (e: React.TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       e.preventDefault()
       const touches = e.targetTouches
       const view = viewCanvasRef.current
@@ -482,7 +478,7 @@ export default function PixelBattleCanvas({
   )
 
   const handleTouchEnd = useCallback(
-    (e: React.TouchEvent<HTMLCanvasElement>) => {
+    (e: TouchEvent) => {
       e.preventDefault()
       const touches = e.targetTouches
 
@@ -524,8 +520,6 @@ export default function PixelBattleCanvas({
   const handleBuyLimitUpgrade = useCallback(async () => {
     if (isShopOnCooldown || !session?.user) return
 
-    // Оптимистичная блокировка UI сразу — сервер всё равно перепроверит и
-    // при ошибке (кулдаун/лимит) состояние надо будет вернуть через reload.
     triggerShopCooldown()
 
     try {
@@ -536,8 +530,6 @@ export default function PixelBattleCanvas({
       setCharges(result.charges)
       setMaxCharges(result.max_charges)
     } catch {
-      // Сервер отказал (кулдаун ещё не истёк / лимит превышен) —
-      // подтягиваем актуальное состояние вместо того, чтобы врать в UI.
       loadUserProfile(session.user.id)
     }
   }, [isShopOnCooldown, session, triggerShopCooldown])
@@ -564,7 +556,7 @@ export default function PixelBattleCanvas({
   // Input Handling
   // ==========================================================================
 
-  const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault()
     const view = viewCanvasRef.current
     if (!view) return
@@ -589,6 +581,24 @@ export default function PixelBattleCanvas({
     if (scaleLabelRef.current)
       scaleLabelRef.current.textContent = `${Math.round(newScale * 100)}%`
   }, [])
+
+  // === НОВЫЙ ХУК ДЛЯ УСТАНОВКИ НЕПАССИВНЫХ СЛУШАТЕЛЕЙ СОБЫТИЙ ===
+  useEffect(() => {
+    const canvas = viewCanvasRef.current
+    if (!canvas) return
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false })
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false })
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false })
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false })
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel)
+      canvas.removeEventListener('touchstart', handleTouchStart)
+      canvas.removeEventListener('touchmove', handleTouchMove)
+      canvas.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [handleWheel, handleTouchStart, handleTouchMove, handleTouchEnd])
 
   const handlePointerDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -743,10 +753,6 @@ export default function PixelBattleCanvas({
     return () => cancelAnimationFrame(rafId)
   }, [msUntilNextCharge])
 
-  // --- Периодическое сохранение регенерированных зарядов в БД ---
-  // Без этого пассивно накопленные заряды жили только в состоянии React
-  // и терялись при перезагрузке/переключении вкладок, т.к. userService.updateCharges
-  // вызывался только при трате зарядов (handleConfirmDrafts).
   const persistCharges = useCallback(() => {
     if (!session?.user) return
     userService.syncCharges().then(result => {
@@ -757,11 +763,6 @@ export default function PixelBattleCanvas({
     })
   }, [session])
 
-  // Отдельная версия для beforeunload/visibilitychange=hidden: обычный
-  // supabase-js fetch браузер может оборвать (NS_BINDING_ABORTED) при закрытии
-  // вкладки. fetch(..., { keepalive: true }) браузер гарантированно
-  // отправляет и после выгрузки страницы — но требует ручных заголовков,
-  // поэтому идём напрямую в PostgREST, а не через supabase-js.
   const persistChargesKeepalive = useCallback(() => {
     if (!session?.user || !supabaseUrl || !supabaseAnonKey) return
     try {
@@ -794,7 +795,7 @@ export default function PixelBattleCanvas({
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', persistChargesKeepalive)
-      persistCharges() // сохранить и при размонтировании компонента (обычный переход по SPA)
+      persistCharges() 
     }
   }, [session, persistCharges, persistChargesKeepalive])
 
@@ -935,8 +936,6 @@ export default function PixelBattleCanvas({
       setProfile({ username: data.username, is_admin: data.is_admin })
       setMaxCharges(data.max_charges)
 
-      // Учитываем время, прошедшее с последнего сохранённого тика регена
-      // (например, пока вкладка была закрыта), чтобы не терять заряды.
       const serverRegenTime = data.last_regen_time
         ? new Date(data.last_regen_time).getTime()
         : Date.now()
@@ -1026,7 +1025,6 @@ export default function PixelBattleCanvas({
   const regenProgressFactor =
     (CHARGE_REGEN_MS - msUntilNextCharge) / CHARGE_REGEN_MS
 
-  // Ограничения для интерфейса Магазина
   const isLimitMaxed = !profile?.is_admin && maxCharges >= MAX_REGULAR_LIMIT
   const cannotUpgradeLimit =
     !profile?.is_admin && maxCharges + LIMIT_UPGRADE_STEP > MAX_REGULAR_LIMIT
@@ -1043,14 +1041,10 @@ export default function PixelBattleCanvas({
         <canvas
           ref={viewCanvasRef}
           className="h-full w-full touch-none cursor-crosshair"
-          onWheel={handleWheel}
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}
           onMouseLeave={handlePointerUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
           onContextMenu={(e) => e.preventDefault()}
         />
 
