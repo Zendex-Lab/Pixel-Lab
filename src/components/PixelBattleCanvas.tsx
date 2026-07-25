@@ -1209,22 +1209,6 @@ export default function PixelBattleCanvas({
         )}
       </div>
 
-      {/* State B Top Backdrop Overlay */}
-      {isActiveDrawingMode && (
-        <div
-          onClick={() => {
-            clearDrafts()
-            setIsActiveDrawingMode(false)
-          }}
-          className="fixed inset-x-0 top-0 h-[30dvh] bg-black/40 backdrop-blur-sm z-30 cursor-pointer flex items-end justify-center pb-4 animate-in fade-in duration-300 md:hidden"
-        >
-          <div className="text-white/60 text-xs font-medium flex items-center gap-1.5 bg-black/50 px-3 py-1.5 rounded-full">
-            <X className="h-3.5 w-3.5" />
-            <span>Нажмите, чтобы выйти из рисования</span>
-          </div>
-        </div>
-      )}
-
       {/* ==================== MOBILE BOTTOM BAR LAYOUTS ==================== */}
       {/* State A (Default Viewing Mode) */}
       {!isActiveDrawingMode && (
