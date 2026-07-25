@@ -6,6 +6,8 @@ import { userService } from '../services/userService'
 import AuthModal from './AuthModal'
 import SettingsModal from './SettingsModal'
 import AdminModal from './AdminModal'
+import TemplateOverlayModal from './TemplateOverlayModal'
+import { useTemplateOverlay } from './useTemplateOverlay'
 import type { Session } from '@supabase/supabase-js'
 import {
   Palette,
@@ -16,6 +18,7 @@ import {
   Zap,
   Info,
   ShoppingBag,
+  ImagePlus,
   X,
   PlusCircle,
   BatteryCharging,
@@ -166,6 +169,12 @@ export default function PixelBattleCanvas({
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false)
   const [selectedColorIndex, setSelectedColorIndex] = useState(4)
+  const [isTemplateOpen, setIsTemplateOpen] = useState(false)
+  const templateOverlay = useTemplateOverlay(PALETTE_HEX, () => {
+    dirtyRef.current = true
+  })
+  const templateStateRef = useRef(templateOverlay.state)
+  templateStateRef.current = templateOverlay.state
 
   // --- Charges System State ---
   const [maxCharges, setMaxCharges] = useState(INITIAL_MAX_CHARGES)
@@ -744,6 +753,10 @@ export default function PixelBattleCanvas({
     return () => cancelAnimationFrame(rafId)
   }, [msUntilNextCharge])
 
+  // --- Периодическое сохранение регенерированных зарядов в БД ---
+  // Без этого пассивно накопленные заряды жили только в состоянии React
+  // и терялись при перезагрузке/переключении вкладок, т.к. userService.updateCharges
+  // вызывался только при трате зарядов (handleConfirmDrafts).
   const persistCharges = useCallback(() => {
     if (!session?.user) return
     userService.updateCharges(
@@ -820,6 +833,16 @@ export default function PixelBattleCanvas({
       ctx.scale(scale, scale)
 
       ctx.drawImage(off, 0, 0)
+
+      // --- Шаблон-подсказка (наложенное фото) ---
+      const template = templateOverlay.quantizedRef.current
+      const tState = templateStateRef.current
+      if (tState.enabled && template) {
+        ctx.save()
+        ctx.globalAlpha = tState.opacity
+        ctx.drawImage(template.canvas, tState.x, tState.y, tState.width, tState.height)
+        ctx.restore()
+      }
 
       // --- Рендер черновиков ---
       if (pendingPixelsRef.current.size > 0) {
@@ -1068,6 +1091,13 @@ export default function PixelBattleCanvas({
             )}
           </button>
           <button
+            onClick={() => setIsTemplateOpen(true)}
+            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
+            title="Шаблон-подсказка"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => setIsMobileProfileOpen(true)}
             className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
             title="Профиль"
@@ -1113,6 +1143,14 @@ export default function PixelBattleCanvas({
             {!isShopOnCooldown && (
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--accent)] animate-ping" />
             )}
+          </button>
+          <div className="h-px w-full bg-[var(--glass-border)]" />
+          <button
+            onClick={() => setIsTemplateOpen(true)}
+            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
+            title="Шаблон-подсказка"
+          >
+            <ImagePlus className="h-5 w-5" />
           </button>
           <div className="h-px w-full bg-[var(--glass-border)]" />
           <button
@@ -1557,6 +1595,15 @@ export default function PixelBattleCanvas({
           setIsDark={setIsDark}
           showGrid={showGrid}
           setShowGrid={setShowGrid}
+        />
+      )}
+
+      {isTemplateOpen && (
+        <TemplateOverlayModal
+          onClose={() => setIsTemplateOpen(false)}
+          overlay={templateOverlay}
+          gridWidth={width}
+          gridHeight={height}
         />
       )}
 
