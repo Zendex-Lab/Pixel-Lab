@@ -24,7 +24,7 @@ export const pixelService = {
 
     if (error) {
       console.error('Error placing pixel:', error);
-      throw error; // фронту важно знать, что чарджей не хватило / запрос отклонён
+      throw error;
     }
   },
 

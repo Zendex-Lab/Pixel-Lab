@@ -42,10 +42,6 @@ export const userService = {
     return data?.[0] ?? null;
   },
 
-  // ===== ADMIN METHODS =====
-  // Права проверяются внутри RPC на сервере (is_admin вызывающего),
-  // а не по тому, что прислал клиент.
-
   async updateAdminUserStats(targetUserId: string, charges: number, max_charges: number) {
     const { data, error } = await supabase.rpc('admin_update_user_stats', {
       p_target_id: targetUserId,

@@ -5,7 +5,7 @@ import { userService } from "../services/userService";
 interface AdminModalProps {
   onClose: () => void;
   currentUserId: string;
-  onSuccess: () => void; // Вызывается после успешного действия, чтобы обновить стейт
+  onSuccess: () => void;
 }
 
 export default function AdminModal({ onClose, currentUserId, onSuccess }: AdminModalProps) {

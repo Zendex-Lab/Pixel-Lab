@@ -14,7 +14,7 @@ const realSupabaseAnonKey =
   (typeof process !== 'undefined' && process.env?.SUPABASE_ANON_KEY) ||
   ''
 
-// Mock Supabase to allow the app to run offline/without a real Supabase backend
+// mock supabase to allow the app to run offline/without a real supabase backend
 const createMockSupabase = () => {
   console.log('🛠️ Using mock Supabase client for offline/local testing.')
 
@@ -71,7 +71,7 @@ const createMockSupabase = () => {
         return { data: { session: mockSession }, error: null }
       },
       onAuthStateChange: (callback: any) => {
-        // Trigger callback with mock session
+        //trigger callback with mock session
         setTimeout(() => callback('SIGNED_IN', mockSession), 0)
         return {
           data: {
@@ -158,8 +158,6 @@ if (!hasCredentials) {
   )
 }
 
-// Экспортируем URL/anon key отдельно — нужны для "ручных" fetch(..., { keepalive: true })
-// в местах, где supabase-js не подходит (например, сохранение на beforeunload).
 export const supabaseUrl = realSupabaseUrl
 export const supabaseAnonKey = realSupabaseAnonKey
 

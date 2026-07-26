@@ -269,49 +269,54 @@ export default function PixelBattleCanvas({
     [isEraserMode, session, width, height, selectedColorIndex],
   )
 
-  const handleConfirmDrafts = useCallback(() => {
+  const handleConfirmDrafts = useCallback(async () => {
     if (!session || pendingPixelsRef.current.size === 0) return
 
     const drafts = Array.from(pendingPixelsRef.current.values())
     const count = drafts.length
 
-    // Track last user painted pixel coordinate
-    if (drafts.length > 0) {
-      const last = drafts[drafts.length - 1]
-      lastUserPaintedPixelRef.current = { x: last.x, y: last.y }
+    try {
+      await pixelService.placePixelsBatch(drafts, session.user.id);
+      
+      if (drafts.length > 0) {
+        const last = drafts[drafts.length - 1]
+        lastUserPaintedPixelRef.current = { x: last.x, y: last.y }
+      }
+
+      const offCtx = offscreenCtxRef.current
+      if (offCtx) {
+        drafts.forEach(({ x, y, color_idx }) => {
+          const idx = y * width + x
+          pixelDataRef.current[idx] = color_idx
+          const single = offCtx.createImageData(1, 1)
+          new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx]
+          offCtx.putImageData(single, x, y)
+        })
+      }
+
+      let newMaxCharges = maxChargesRef.current + count * MAX_CHARGES_GROWTH_PER_PIXEL
+      if (!profile?.is_admin) {
+        newMaxCharges = Math.min(newMaxCharges, MAX_REGULAR_LIMIT)
+      }
+
+      const newCharges = Math.max(0, chargesRef.current - count)
+
+      chargesRef.current = newCharges
+      maxChargesRef.current = newMaxCharges
+      setCharges(newCharges)
+      setMaxCharges(newMaxCharges)
+
+      pendingPixelsRef.current.clear()
+      setPendingCount(0)
+      dirtyRef.current = true
+      setIsEraserMode(false)
+
+    } catch (error) {
+      console.error("Сервер отклонил пиксели:", error);
+      clearDrafts(); 
+      loadUserProfile(session.user.id);
+      alert("Ошибка при установке пикселей. Возможно, не хватает зарядов или рассинхрон.");
     }
-
-    const offCtx = offscreenCtxRef.current
-    if (offCtx) {
-      drafts.forEach(({ x, y, color_idx }) => {
-        const idx = y * width + x
-        pixelDataRef.current[idx] = color_idx
-        const single = offCtx.createImageData(1, 1)
-        new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx]
-        offCtx.putImageData(single, x, y)
-      })
-    }
-
-    let newMaxCharges =
-      maxChargesRef.current + count * MAX_CHARGES_GROWTH_PER_PIXEL
-    // Жесткое ограничение лимита при рисовании для обычных пользователей
-    if (!profile?.is_admin) {
-      newMaxCharges = Math.min(newMaxCharges, MAX_REGULAR_LIMIT)
-    }
-
-    const newCharges = Math.max(0, chargesRef.current - count)
-
-    chargesRef.current = newCharges
-    maxChargesRef.current = newMaxCharges
-    setCharges(newCharges)
-    setMaxCharges(newMaxCharges)
-
-    pendingPixelsRef.current.clear()
-    setPendingCount(0)
-    dirtyRef.current = true
-    setIsEraserMode(false)
-
-    pixelService.placePixelsBatch(drafts, session.user.id)
   }, [session, width, profile])
 
   const clearDrafts = useCallback(() => {
@@ -355,7 +360,6 @@ export default function PixelBattleCanvas({
       if (!view) return
 
       if (touches.length === 1) {
-        // Single finger touch: start draw (if Active Drawing Mode) or start panning
         const touch = touches[0]
         touchLastPosRef.current = { x: touch.clientX, y: touch.clientY }
         touchLastPaintedTileRef.current = null
@@ -369,7 +373,7 @@ export default function PixelBattleCanvas({
           }
         }
       } else if (touches.length === 2) {
-        // Two finger gesture: calculate initial distance, midpoint and save transform state
+
         const touch1 = touches[0]
         const touch2 = touches[1]
         const dx = touch1.clientX - touch2.clientX
@@ -402,7 +406,6 @@ export default function PixelBattleCanvas({
         const coordsStr =
           grid && grid.inBounds ? `${grid.gridX}, ${grid.gridY}` : '—, —'
 
-        // Update coordinate tracker on single-finger touch
         if (coordsLabelRef.current) {
           coordsLabelRef.current.textContent = coordsStr
         }
@@ -411,7 +414,6 @@ export default function PixelBattleCanvas({
         }
 
         if (isActiveDrawingMode) {
-          // Continuous drawing in active drawing mode
           if (grid && grid.inBounds) {
             const last = touchLastPaintedTileRef.current
             if (!last || last.x !== grid.gridX || last.y !== grid.gridY) {
@@ -424,7 +426,6 @@ export default function PixelBattleCanvas({
             }
           }
         } else {
-          // Single finger panning
           if (touchLastPosRef.current) {
             const t = transformRef.current
             t.offsetX += touch.clientX - touchLastPosRef.current.x
@@ -438,7 +439,7 @@ export default function PixelBattleCanvas({
         touchStartDistRef.current &&
         touchStartMidRef.current
       ) {
-        // Two finger zoom and pan
+
         const touch1 = touches[0]
         const touch2 = touches[1]
         const dx = touch1.clientX - touch2.clientX
@@ -457,7 +458,6 @@ export default function PixelBattleCanvas({
 
         const t = transformRef.current
 
-        // Pivot around the start midpoint (map interaction zoom + pan)
         const startMid = touchStartMidRef.current
         const startOffset = touchStartOffsetRef.current
 
@@ -465,7 +465,6 @@ export default function PixelBattleCanvas({
         const worldY = (startMid.y - startOffset.y) / touchStartScaleRef.current
 
         t.scale = newScale
-        // Also apply midpoint displacement to translate viewport along with fingers (simultaneous pan & zoom)
         t.offsetX = currentMidX - worldX * newScale
         t.offsetY = currentMidY - worldY * newScale
 
@@ -488,7 +487,6 @@ export default function PixelBattleCanvas({
         touchStartDistRef.current = null
         touchStartMidRef.current = null
       } else if (touches.length === 1) {
-        // Transition from 2 to 1 finger
         const touch = touches[0]
         touchLastPosRef.current = { x: touch.clientX, y: touch.clientY }
         touchLastPaintedTileRef.current = null
@@ -582,7 +580,7 @@ export default function PixelBattleCanvas({
       scaleLabelRef.current.textContent = `${Math.round(newScale * 100)}%`
   }, [])
 
-  // === НОВЫЙ ХУК ДЛЯ УСТАНОВКИ НЕПАССИВНЫХ СЛУШАТЕЛЕЙ СОБЫТИЙ ===
+  // === hook для установки непассивных слушателей событий ===
   useEffect(() => {
     const canvas = viewCanvasRef.current
     if (!canvas) return
@@ -777,7 +775,7 @@ export default function PixelBattleCanvas({
         body: '{}',
       })
     } catch {
-      // keepalive-запрос best-effort: страница всё равно уже закрывается
+      // keepalive запрос best effort, страница всё равно уже закрывается
     }
   }, [session])
 
@@ -818,7 +816,6 @@ export default function PixelBattleCanvas({
     dirtyRef.current = true
   }, [width, height])
 
-  // Главный цикл рендера
   useEffect(() => {
     let rafId: number
     const render = () => {
@@ -849,7 +846,6 @@ export default function PixelBattleCanvas({
 
       ctx.drawImage(off, 0, 0)
 
-      // --- Шаблон-подсказка (наложенное фото) ---
       const template = templateOverlay.quantizedRef.current
       const tState = templateStateRef.current
       if (tState.enabled && template) {
@@ -859,7 +855,6 @@ export default function PixelBattleCanvas({
         ctx.restore()
       }
 
-      // --- Рендер черновиков ---
       if (pendingPixelsRef.current.size > 0) {
         const time = Date.now()
         const alpha = 0.5 + 0.3 * Math.sin(time / 150)
@@ -872,7 +867,6 @@ export default function PixelBattleCanvas({
         ctx.globalAlpha = 1.0
       }
 
-      // --- Сетка ---
       if (showGridRef.current && scale >= GRID_LINES_VISIBLE_FROM_SCALE) {
         ctx.strokeStyle = 'oklch(from var(--border) l c h / 0.15)'
         ctx.lineWidth = 1 / scale
@@ -1072,7 +1066,7 @@ export default function PixelBattleCanvas({
         <div className="pointer-events-none absolute top-4 right-4 glass flex items-center gap-2 px-3.5 py-2 text-xs text-[var(--muted-foreground)] hidden md:flex">
           <Move className="h-4 w-4" />
           <span>
-            Колесо — зум · ЛКМ/СКМ перемещение ·{' '}
+            Колесо - зум · ЛКМ/СКМ перемещение ·{' '}
             <span className="text-[var(--primary)] font-medium">
               Shift+Drag — рисовать
             </span>
@@ -1645,7 +1639,6 @@ export default function PixelBattleCanvas({
               </div>
             </div>
 
-            {/* Баннер максимального лимита */}
             {isLimitMaxed && (
               <div className="mb-4 flex items-center gap-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-medium">
                 <Info className="h-4 w-4 shrink-0" />
