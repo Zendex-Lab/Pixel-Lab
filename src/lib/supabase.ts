@@ -52,13 +52,20 @@ const createMockSupabase = () => {
 
   const mockClient = {
     auth: {
-      signUp: async ({ email, password, options }: any) => {
+      signUp: async ({
+        email: _email,
+        password: _password,
+        options: _options,
+      }: any) => {
         return {
           data: { user: mockSession.user, session: mockSession },
           error: null,
         }
       },
-      signInWithPassword: async ({ email, password }: any) => {
+      signInWithPassword: async ({
+        email: _email,
+        password: _password,
+      }: any) => {
         return {
           data: { user: mockSession.user, session: mockSession },
           error: null,
@@ -84,9 +91,9 @@ const createMockSupabase = () => {
     },
     from: (table: string) => {
       return {
-        select: (columns: string = '*') => {
+        select: (_columns: string = '*') => {
           return {
-            eq: (col: string, val: any) => {
+            eq: (_col: string, _val: any) => {
               return {
                 single: async () => {
                   if (table === 'user_profiles') {
@@ -103,7 +110,7 @@ const createMockSupabase = () => {
                 },
               }
             },
-            range: async (from: number, to: number) => {
+            range: async (_from: number, _to: number) => {
               if (table === 'pixels') {
                 return { data: [], error: null }
               }
@@ -114,21 +121,21 @@ const createMockSupabase = () => {
             },
           }
         },
-        upsert: async (payload: any, options?: any) => {
+        upsert: async (payload: any, _options?: any) => {
           return { data: payload, error: null }
         },
         update: async (payload: any) => {
           return {
-            eq: (col: string, val: any) => {
+            eq: (_col: string, _val: any) => {
               return { data: payload, error: null }
             },
           }
         },
       }
     },
-    channel: (name: string) => {
+    channel: (_name: string) => {
       return {
-        on: (event: string, filter: any, callback: any) => {
+        on: (_event: string, _filter: any, _callback: any) => {
           return {
             subscribe: (statusCallback: any) => {
               if (statusCallback) {
@@ -140,8 +147,8 @@ const createMockSupabase = () => {
         },
       }
     },
-    removeChannel: (channel: any) => {},
-    rpc: async (fnName: string, params?: any) => {
+    removeChannel: (_channel: any) => {},
+    rpc: async (_fnName: string, _params?: any) => {
       // Мок для RPC (place_pixel / place_pixels_batch и т.п.)
       return { data: null, error: null }
     },

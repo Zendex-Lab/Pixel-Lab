@@ -1,10 +1,9 @@
-import { supabase } from '../lib/supabase';
-import { userService } from '../services/userService' 
+import { supabase } from '../lib/supabase'
 
 export interface PixelInfo {
-  color_idx: number;
-  username: string | null;
-  updated_at: string;
+  color_idx: number
+  username: string | null
+  updated_at: string
 }
 
 export const pixelService = {
@@ -12,14 +11,14 @@ export const pixelService = {
     const { data, error } = await supabase
       .from('pixels')
       .select('x, y, color_idx')
-      .range(0, 99999);
+      .range(0, 99999)
 
     if (error) {
-      console.error('Error loading pixels:', error);
-      return [];
+      console.error('Error loading pixels:', error)
+      return []
     }
 
-    return data || [];
+    return data || []
   },
 
   async placePixel(x: number, y: number, color_idx: number) {
@@ -27,24 +26,27 @@ export const pixelService = {
       p_x: x,
       p_y: y,
       p_color_idx: color_idx,
-    });
+    })
 
     if (error) {
-      console.error('Error placing pixel:', error);
-      throw error;
+      console.error('Error placing pixel:', error)
+      throw error
     }
   },
 
-  async placePixelsBatch(pixels: { x: number; y: number; color_idx: number }[], _userId: string) {
-    if (!pixels.length) return;
+  async placePixelsBatch(
+    pixels: { x: number; y: number; color_idx: number }[],
+    _userId: string,
+  ) {
+    if (!pixels.length) return
 
     const { error } = await supabase.rpc('place_pixels_batch', {
       p_pixels: pixels,
-    });
+    })
 
     if (error) {
-      console.error('Error placing pixel batch:', error);
-      throw error;
+      console.error('Error placing pixel batch:', error)
+      throw error
     }
   },
 
@@ -55,21 +57,21 @@ export const pixelService = {
         .select('*')
         .eq('x', x)
         .eq('y', y)
-        .maybeSingle();
+        .maybeSingle()
 
-      if (pixelError) throw pixelError;
-      if (!pixel) return null;
+      if (pixelError) throw pixelError
+      if (!pixel) return null
 
-      let username = null;
+      let username = null
       if (pixel.user_id) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('username')
           .eq('id', pixel.user_id)
-          .maybeSingle();
-        
+          .maybeSingle()
+
         if (profile) {
-          username = profile.username;
+          username = profile.username
         }
       }
 
@@ -77,30 +79,40 @@ export const pixelService = {
         color_idx: pixel.color_idx,
         username: username,
         updated_at: pixel.updated_at || new Date().toISOString(),
-      };
+      }
     } catch (err) {
-      console.error('Ошибка при загрузке инфы о пикселе:', err);
-      throw err;
+      console.error('Ошибка при загрузке инфы о пикселе:', err)
+      throw err
     }
   },
 
-  subscribeToPixels(onUpdate: (payload: { x: number; y: number; color_idx: number }) => void) {
+  subscribeToPixels(
+    onUpdate: (payload: { x: number; y: number; color_idx: number }) => void,
+  ) {
     const channel = supabase
       .channel('public:pixels')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'pixels' },
-        (payload) => {
-          const newRow = payload.new as { x: number; y: number; color_idx: number };
-          if (newRow && typeof newRow.x === 'number' && typeof newRow.y === 'number') {
-            onUpdate(newRow);
+        (payload: any) => {
+          const newRow = payload.new as {
+            x: number
+            y: number
+            color_idx: number
           }
-        }
+          if (
+            newRow &&
+            typeof newRow.x === 'number' &&
+            typeof newRow.y === 'number'
+          ) {
+            onUpdate(newRow)
+          }
+        },
       )
-      .subscribe();
+      .subscribe()
 
     return () => {
-      supabase.removeChannel(channel);
-    };
+      supabase.removeChannel(channel)
+    }
   },
-};
+}

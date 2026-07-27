@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { authService } from '../services/authService';
+import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { Lock, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import { authService } from '../services/authService'
 
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 8
 
-type Status = 'checking' | 'ready' | 'invalid' | 'done';
+type Status = 'checking' | 'ready' | 'invalid' | 'done'
 
 /**
  * Route: /auth/reset-password
@@ -18,82 +18,84 @@ type Status = 'checking' | 'ready' | 'invalid' | 'done';
  * this avoids ever calling updateUser() without a genuine recovery session.
  */
 export default function ResetPasswordPage() {
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<Status>('checking');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const navigate = useNavigate()
+  const [status, setStatus] = useState<Status>('checking')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     // If the link was already used, expired, or tampered with, Supabase
     // redirects back with an error in the URL instead of a valid token.
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const searchParams = new URLSearchParams(window.location.search)
     if (hashParams.get('error') || searchParams.get('error')) {
-      setStatus('invalid');
-      return;
+      setStatus('invalid')
+      return
     }
 
-    let settled = false;
+    let settled = false
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event: any) => {
       if (event === 'PASSWORD_RECOVERY') {
-        settled = true;
-        setStatus('ready');
+        settled = true
+        setStatus('ready')
       }
-    });
+    })
 
     // Fallback in case the event fired a tick before this listener attached.
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: any) => {
       if (!settled && data.session) {
-        settled = true;
-        setStatus('ready');
+        settled = true
+        setStatus('ready')
       }
-    });
+    })
 
     const timeout = setTimeout(() => {
-      if (!settled) setStatus('invalid');
-    }, 5000);
+      if (!settled) setStatus('invalid')
+    }, 5000)
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, []);
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов`);
-      return;
+      setError(
+        `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов`,
+      )
+      return
     }
     if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
-      return;
+      setError('Пароли не совпадают')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const { error } = await authService.updatePassword(password);
-      if (error) throw error;
+      const { error } = await authService.updatePassword(password)
+      if (error) throw error
 
       // Strip the recovery token from the URL so it can't be replayed.
-      window.history.replaceState(null, '', '/auth/reset-password');
-      setStatus('done');
+      window.history.replaceState(null, '', '/auth/reset-password')
+      setStatus('done')
     } catch (err: any) {
       setError(
         err?.message ||
           'Не удалось обновить пароль. Ссылка могла устареть — запросите новую.',
-      );
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] p-4">
@@ -101,14 +103,19 @@ export default function ResetPasswordPage() {
         <h1 className="text-xl font-display font-bold mb-6">Новый пароль</h1>
 
         {status === 'checking' && (
-          <p className="text-sm text-[var(--muted-foreground)]">Проверяем ссылку...</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Проверяем ссылку...
+          </p>
         )}
 
         {status === 'invalid' && (
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--destructive)]/20 border border-[var(--destructive)]/50 text-sm">
               <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
-              <span>Ссылка недействительна или истекла. Запросите новую в окне входа.</span>
+              <span>
+                Ссылка недействительна или истекла. Запросите новую в окне
+                входа.
+              </span>
             </div>
             <button
               onClick={() => navigate({ to: '/' })}
@@ -183,5 +190,5 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </div>
-  );
+  )
 }

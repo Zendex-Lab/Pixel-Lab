@@ -1032,7 +1032,7 @@ export default function PixelBattleCanvas({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, sess) => {
+    } = supabase.auth.onAuthStateChange((_event: any, sess: any) => {
       setSession(sess)
       if (sess?.user) {
         loadUserProfile(sess.user.id)
@@ -1049,7 +1049,7 @@ export default function PixelBattleCanvas({
     pixelService.loadAllPixels().then((dbPixels) => {
       const offCtx = offscreenCtxRef.current
       if (!offCtx) return
-      dbPixels.forEach(({ x, y, color_idx }) => {
+      dbPixels.forEach(({ x, y, color_idx }: any) => {
         const idx = y * width + x
         pixelDataRef.current[idx] = color_idx
         const single = offCtx.createImageData(1, 1)
@@ -1060,7 +1060,7 @@ export default function PixelBattleCanvas({
     })
 
     const unsubscribe = pixelService.subscribeToPixels(
-      ({ x, y, color_idx }) => {
+      ({ x, y, color_idx }: any) => {
         const idx = y * width + x
         pixelDataRef.current[idx] = color_idx
 

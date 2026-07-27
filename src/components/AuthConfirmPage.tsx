@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
+import { CheckCircle2, AlertTriangle } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
-type Status = 'checking' | 'ok' | 'error';
+type Status = 'checking' | 'ok' | 'error'
 
 /**
  * Route: /auth/confirm
@@ -14,64 +14,68 @@ type Status = 'checking' | 'ok' | 'error';
  * back to the app.
  */
 export default function AuthConfirmPage() {
-  const navigate = useNavigate();
-  const [status, setStatus] = useState<Status>('checking');
+  const navigate = useNavigate()
+  const [status, setStatus] = useState<Status>('checking')
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.slice(1));
-    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.slice(1))
+    const searchParams = new URLSearchParams(window.location.search)
     if (hashParams.get('error') || searchParams.get('error')) {
-      setStatus('error');
-      return;
+      setStatus('error')
+      return
     }
 
-    let settled = false;
+    let settled = false
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session) {
-        settled = true;
-        setStatus('ok');
+        settled = true
+        setStatus('ok')
       }
-    });
+    })
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: any) => {
       if (!settled && data.session) {
-        settled = true;
-        setStatus('ok');
+        settled = true
+        setStatus('ok')
       }
-    });
+    })
 
     const timeout = setTimeout(() => {
-      if (!settled) setStatus('error');
-    }, 5000);
+      if (!settled) setStatus('error')
+    }, 5000)
 
     return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
-  }, []);
+      subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
+  }, [])
 
   useEffect(() => {
     if (status === 'ok') {
-      window.history.replaceState(null, '', '/auth/confirm');
-      const t = setTimeout(() => navigate({ to: '/' }), 1500);
-      return () => clearTimeout(t);
+      window.history.replaceState(null, '', '/auth/confirm')
+      const t = setTimeout(() => navigate({ to: '/' }), 1500)
+      return () => clearTimeout(t)
     }
-  }, [status, navigate]);
+  }, [status, navigate])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)] p-4">
       <div className="glass-strong w-full max-w-sm p-6 rounded-3xl border border-[var(--glass-border)] shadow-2xl text-center">
         {status === 'checking' && (
-          <p className="text-sm text-[var(--muted-foreground)]">Подтверждаем почту...</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Подтверждаем почту...
+          </p>
         )}
         {status === 'ok' && (
           <div className="flex flex-col items-center gap-3">
             <CheckCircle2 className="h-8 w-8 text-[var(--primary)]" />
             <p className="font-bold">Почта подтверждена!</p>
-            <p className="text-sm text-[var(--muted-foreground)]">Переходим на сайт...</p>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Переходим на сайт...
+            </p>
           </div>
         )}
         {status === 'error' && (
@@ -90,5 +94,5 @@ export default function AuthConfirmPage() {
         )}
       </div>
     </div>
-  );
+  )
 }
