@@ -154,6 +154,7 @@ export default function PixelBattleCanvas({
   // --- Input & Drag State ---
   const isPointerDownRef = useRef(false)
   const dragButtonRef = useRef<number>(0)
+  const pointerDownPosRef = useRef({ x: 0, y: 0 })
   const lastPointerPosRef = useRef({ x: 0, y: 0 })
   const isShiftPressedRef = useRef(false)
   const lastPaintedTileRef = useRef<{ x: number; y: number } | null>(null)
@@ -228,6 +229,7 @@ export default function PixelBattleCanvas({
 
   const openPixelInfo = useCallback(async (gridX: number, gridY: number) => {
     setPixelInfoQuery({ x: gridX, y: gridY, loading: true, data: null })
+    setIsPaletteOpen(false) // Закрываем палитру, если она была открыта
     try {
       const data = await pixelService.getPixelInfo(gridX, gridY)
       setPixelInfoQuery({ x: gridX, y: gridY, loading: false, data })
@@ -631,6 +633,7 @@ export default function PixelBattleCanvas({
 
       isPointerDownRef.current = true
       dragButtonRef.current = e.button
+      pointerDownPosRef.current = { x: e.clientX, y: e.clientY }
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY }
       lastPaintedTileRef.current = null
 
@@ -688,16 +691,26 @@ export default function PixelBattleCanvas({
       isPointerDownRef.current = false
       lastPaintedTileRef.current = null
 
-      if (wasPointerDown && button === 0 && !isShiftPressedRef.current) {
-        const dx = Math.abs(e.clientX - lastPointerPosRef.current.x)
-        const dy = Math.abs(e.clientY - lastPointerPosRef.current.y)
-        if (dx < 3 && dy < 3) {
+      if (wasPointerDown && button === 0) {
+        const dx = Math.abs(e.clientX - pointerDownPosRef.current.x)
+        const dy = Math.abs(e.clientY - pointerDownPosRef.current.y)
+        
+        // Если это обычный клик, а не перетаскивание
+        if (dx < 5 && dy < 5) {
           const grid = screenToGrid(e.clientX, e.clientY)
-          if (grid && grid.inBounds) openPixelInfo(grid.gridX, grid.gridY)
+          if (grid && grid.inBounds) {
+            // Если зажат Shift ИЛИ уже есть черновики -> мы в процессе рисования, ставим пиксель
+            if (isShiftPressedRef.current || pendingPixelsRef.current.size > 0) {
+              handleDraftAction(grid.gridX, grid.gridY)
+            } else {
+              // Если черновиков нет и Shift не зажат -> открываем инфо о пикселе
+              openPixelInfo(grid.gridX, grid.gridY)
+            }
+          }
         }
       }
     },
-    [screenToGrid, openPixelInfo],
+    [screenToGrid, handleDraftAction, openPixelInfo],
   )
 
   const zoomBy = useCallback((factor: number) => {
@@ -1522,24 +1535,21 @@ export default function PixelBattleCanvas({
           <button
             type="button"
             onClick={() => {
-              const px = pixelInfoQuery.x
-              const py = pixelInfoQuery.y
               setPixelInfoQuery(null)
-              handleDraftAction(px, py)
               setIsActiveDrawingMode(true)
+              setIsPaletteOpen(true)
             }}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] active:scale-95 transition-all text-sm"
           >
             <Brush className="h-5 w-5" />
-            <span>Рисовать тут</span>
+            <span>Рисовать</span>
           </button>
         </div>
       )}
 
       {/* ==================== DESKTOP BOTTOM FLOATING BAR ==================== */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none hidden md:flex flex-col items-center gap-3">
-        {/* Попап с палитрой для ПК */}
-        {isPaletteOpen && !pixelInfoQuery && (
+        {isPaletteOpen && (
           <div className="pointer-events-auto w-full max-w-[320px] glass-strong p-4 rounded-2xl shadow-2xl border border-[var(--glass-border)] animate-in fade-in slide-in-from-bottom-3 duration-200">
             <div className="flex items-center justify-between mb-3 border-b border-[var(--glass-border)] pb-2">
               <span className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider flex items-center gap-1.5">
@@ -1574,103 +1584,105 @@ export default function PixelBattleCanvas({
           </div>
         )}
 
-        {/* Если мы НЕ смотрим информацию о пикселе, показываем обычную панель, иначе показываем инфо-панель */}
-        {!pixelInfoQuery ? (
-          <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
-                  <Zap
-                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${charges > 0 ? 'text-[var(--accent)]' : 'text-[var(--destructive)]'}`}
-                  />
-                  Заряды
-                </span>
-                <span
-                  className="font-retro8bit text-base sm:text-lg font-bold"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {pendingCount > 0 ? (
-                    <span className="text-amber-400">
-                      {charges - pendingCount}
-                    </span>
-                  ) : charges === maxCharges ? (
-                    'MAX'
-                  ) : (
-                    charges
-                  )}
-                  <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">
-                    / {maxCharges}
+        <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg">
+          <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
+                <Zap
+                  className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${charges > 0 ? 'text-[var(--accent)]' : 'text-[var(--destructive)]'}`}
+                />
+                Заряды
+              </span>
+              <span
+                className="font-retro8bit text-base sm:text-lg font-bold"
+                style={{ fontFamily: 'var(--font-display)' }}
+              >
+                {pendingCount > 0 ? (
+                  <span className="text-amber-400">
+                    {charges - pendingCount}
                   </span>
+                ) : charges === maxCharges ? (
+                  'MAX'
+                ) : (
+                  charges
+                )}
+                <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">
+                  / {maxCharges}
                 </span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
-                  style={{
-                    width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
-                    transition: charges < maxCharges ? 'none' : 'width 0.3s',
-                  }}
-                />
-              </div>
+              </span>
             </div>
-
-            <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
-              <button
-                onClick={() => setIsPaletteOpen(!isPaletteOpen)}
-                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
-              >
-                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--primary)]" />
-                <span className="text-sm font-medium hidden sm:inline">
-                  Палитра
-                </span>
-                <div
-                  className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner"
-                  style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
-                />
-              </button>
-              <button
-                onClick={() => setIsEraserMode(!isEraserMode)}
-                className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
-                  isEraserMode
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
-                }`}
-                title="Ластик (стирает черновики)"
-              >
-                <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
-              {pendingCount > 0 ? (
-                <>
-                  <button
-                    onClick={handleConfirmDrafts}
-                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] animate-in zoom-in-95"
-                  >
-                    <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-xs sm:text-sm">
-                      Подтвердить ({pendingCount})
-                    </span>
-                  </button>
-                  <button
-                    onClick={clearDrafts}
-                    className="p-2 sm:p-2.5 rounded-xl border border-[var(--destructive)]/50 bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-all active:scale-95 animate-in zoom-in-95"
-                    title="Очистить черновик"
-                  >
-                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </button>
-                </>
-              ) : (
-                <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
-                  Нарисуйте пиксели,
-                  <br />
-                  чтобы подтвердить
-                </span>
-              )}
+            <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
+                style={{
+                  width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
+                  transition: charges < maxCharges ? 'none' : 'width 0.3s',
+                }}
+              />
             </div>
           </div>
-        ) : (
+
+          <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
+            <button
+              onClick={() => setIsPaletteOpen(!isPaletteOpen)}
+              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
+            >
+              <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--primary)]" />
+              <span className="text-sm font-medium hidden sm:inline">
+                Палитра
+              </span>
+              <div
+                className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner"
+                style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
+              />
+            </button>
+            <button
+              onClick={() => setIsEraserMode(!isEraserMode)}
+              className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
+                isEraserMode
+                  ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
+                  : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
+              }`}
+              title="Ластик (стирает черновики)"
+            >
+              <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
+            {pendingCount > 0 ? (
+              <>
+                <button
+                  onClick={handleConfirmDrafts}
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] animate-in zoom-in-95"
+                >
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs sm:text-sm">
+                    Подтвердить ({pendingCount})
+                  </span>
+                </button>
+                <button
+                  onClick={clearDrafts}
+                  className="p-2 sm:p-2.5 rounded-xl border border-[var(--destructive)]/50 bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-all active:scale-95 animate-in zoom-in-95"
+                  title="Очистить черновик"
+                >
+                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                </button>
+              </>
+            ) : (
+              <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
+                Нарисуйте пиксели,
+                <br />
+                чтобы подтвердить
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== MODALS ==================== */}
+      {pixelInfoQuery && (
+        <div className="hidden md:block pointer-events-auto">
           <PixelInfoPopup
             x={pixelInfoQuery.x}
             y={pixelInfoQuery.y}
@@ -1683,10 +1695,9 @@ export default function PixelBattleCanvas({
               setPixelInfoQuery(null)
             }}
           />
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* ==================== MODALS ==================== */}
       {isAuthModalOpen && (
         <AuthModal
           onClose={() => setIsAuthModalOpen(false)}
