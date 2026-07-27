@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { authService } from '../services/authService'
 import { pixelService } from '../services/pixelService'
-import { userService } from '../services/userService'
+import type { PixelInfo } from '../services/pixelService'
 import AuthModal from './AuthModal'
 import SettingsModal from './SettingsModal'
 import AdminModal from './AdminModal'
 import TemplateOverlayModal from './TemplateOverlayModal'
+import PixelInfoPopup from './PixelInfoPopup'
 import { useTemplateOverlay } from './useTemplateOverlay'
 import type { Session } from '@supabase/supabase-js'
 import {
@@ -136,6 +137,10 @@ export default function PixelBattleCanvas({
   const [pendingCount, setPendingCount] = useState(0)
   const [isEraserMode, setIsEraserMode] = useState(false)
   const [isActiveDrawingMode, setIsActiveDrawingMode] = useState(false)
+  const [pixelInfoQuery, setPixelInfoQuery] = useState<{
+    x: number; y: number; loading: boolean; data: PixelInfo | null
+  } | null>(null)
+  const infoTapStartRef = useRef<{ x: number; y: number } | null>(null)
 
   // --- Touch & Gesture State Refs ---
   const touchStartDistRef = useRef<number | null>(null)
@@ -219,6 +224,16 @@ export default function PixelBattleCanvas({
     },
     [width, height],
   )
+
+  const openPixelInfo = useCallback(async (gridX: number, gridY: number) => {
+    setPixelInfoQuery({ x: gridX, y: gridY, loading: true, data: null })
+    try {
+      const data = await pixelService.getPixelInfo(gridX, gridY)
+      setPixelInfoQuery({ x: gridX, y: gridY, loading: false, data })
+    } catch {
+      setPixelInfoQuery(null)
+    }
+  }, [])
 
   const handleDraftAction = useCallback(
     (gridX: number, gridY: number) => {
@@ -363,6 +378,7 @@ export default function PixelBattleCanvas({
         const touch = touches[0]
         touchLastPosRef.current = { x: touch.clientX, y: touch.clientY }
         touchLastPaintedTileRef.current = null
+        infoTapStartRef.current = { x: touch.clientX, y: touch.clientY }
 
         if (isActiveDrawingMode) {
           const grid = screenToGrid(touch.clientX, touch.clientY)
@@ -373,7 +389,7 @@ export default function PixelBattleCanvas({
           }
         }
       } else if (touches.length === 2) {
-
+        infoTapStartRef.current = null
         const touch1 = touches[0]
         const touch2 = touches[1]
         const dx = touch1.clientX - touch2.clientX
@@ -482,6 +498,16 @@ export default function PixelBattleCanvas({
       const touches = e.targetTouches
 
       if (touches.length === 0) {
+        if (!isActiveDrawingMode && infoTapStartRef.current && e.changedTouches.length === 1) {
+          const touch = e.changedTouches[0]
+          const dx = Math.abs(touch.clientX - infoTapStartRef.current.x)
+          const dy = Math.abs(touch.clientY - infoTapStartRef.current.y)
+          if (dx < 6 && dy < 6) {
+            const grid = screenToGrid(touch.clientX, touch.clientY)
+            if (grid && grid.inBounds) openPixelInfo(grid.gridX, grid.gridY)
+          }
+        }
+        infoTapStartRef.current = null
         touchLastPosRef.current = null
         touchLastPaintedTileRef.current = null
         touchStartDistRef.current = null
@@ -494,7 +520,7 @@ export default function PixelBattleCanvas({
         touchStartMidRef.current = null
       }
     },
-    [],
+    [isActiveDrawingMode, screenToGrid, openPixelInfo],
   )
 
   // ==========================================================================
@@ -666,11 +692,11 @@ export default function PixelBattleCanvas({
         const dy = Math.abs(e.clientY - lastPointerPosRef.current.y)
         if (dx < 3 && dy < 3) {
           const grid = screenToGrid(e.clientX, e.clientY)
-          if (grid && grid.inBounds) handleDraftAction(grid.gridX, grid.gridY)
+          if (grid && grid.inBounds) openPixelInfo(grid.gridX, grid.gridY)
         }
       }
     },
-    [screenToGrid, handleDraftAction],
+    [screenToGrid, openPixelInfo],
   )
 
   const zoomBy = useCallback((factor: number) => {
@@ -1298,7 +1324,7 @@ export default function PixelBattleCanvas({
 
       {/* ==================== MOBILE BOTTOM BAR LAYOUTS ==================== */}
       {/* State A (Default Viewing Mode) */}
-      {!isActiveDrawingMode && (
+      {!isActiveDrawingMode && !pixelInfoQuery && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[360px] z-10 pointer-events-auto flex flex-col items-center gap-2 md:hidden">
           {/* Thin energy/charge progress bar */}
           <div className="w-full glass-strong px-4 py-2 flex flex-col gap-1 rounded-xl">
@@ -1449,6 +1475,64 @@ export default function PixelBattleCanvas({
         </div>
       )}
 
+      {/* State C (Pixel Info Mobile Sheet) */}
+      {!isActiveDrawingMode && pixelInfoQuery && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-[var(--glass-border)] rounded-t-2xl shadow-2xl p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-bottom duration-300">
+          <div className="w-12 h-1 bg-[var(--glass-border)] rounded-full mx-auto mb-1" />
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-display font-bold">
+              Пиксель ({pixelInfoQuery.x}, {pixelInfoQuery.y})
+            </span>
+            <button
+              onClick={() => setPixelInfoQuery(null)}
+              className="p-2 rounded-xl text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg)] transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {pixelInfoQuery.loading ? (
+            <p className="text-sm text-[var(--muted-foreground)]">Загрузка...</p>
+          ) : pixelInfoQuery.data ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span
+                  className="h-4 w-4 rounded border border-[var(--glass-border)] shrink-0"
+                  style={{ backgroundColor: PALETTE_HEX[pixelInfoQuery.data.color_idx] ?? '#000' }}
+                />
+                <span className="text-[var(--muted-foreground)]">
+                  Автор:{' '}
+                  <span className="text-[var(--foreground)] font-semibold">
+                    {pixelInfoQuery.data.username ?? 'неизвестен'}
+                  </span>
+                </span>
+              </div>
+              <div className="text-[var(--muted-foreground)] text-xs">
+                {new Date(pixelInfoQuery.data.updated_at).toLocaleString('ru-RU')}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Этот пиксель ещё никто не закрашивал.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setPixelInfoQuery(null)
+              setIsActiveDrawingMode(true)
+              setIsPaletteOpen(true)
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] active:scale-95 transition-all text-sm"
+          >
+            <Brush className="h-5 w-5" />
+            <span>Рисовать</span>
+          </button>
+        </div>
+      )}
+
       {/* ==================== DESKTOP BOTTOM FLOATING BAR ==================== */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none hidden md:flex flex-col items-center gap-3">
         {isPaletteOpen && (
@@ -1583,6 +1667,20 @@ export default function PixelBattleCanvas({
       </div>
 
       {/* ==================== MODALS ==================== */}
+      {pixelInfoQuery && (
+        <div className="hidden md:block">
+          <PixelInfoPopup
+            x={pixelInfoQuery.x}
+            y={pixelInfoQuery.y}
+            loading={pixelInfoQuery.loading}
+            info={pixelInfoQuery.data}
+            paletteHex={PALETTE_HEX}
+            onClose={() => setPixelInfoQuery(null)}
+            onPaint={() => setPixelInfoQuery(null)}
+          />
+        </div>
+      )}
+
       {isAuthModalOpen && (
         <AuthModal
           onClose={() => setIsAuthModalOpen(false)}
