@@ -8,6 +8,7 @@ import SettingsModal from './SettingsModal'
 import AdminModal from './AdminModal'
 import TemplateOverlayModal from './TemplateOverlayModal'
 import PixelInfoPopup from './PixelInfoPopup'
+import { userService } from '../services/userService'
 import { useTemplateOverlay } from './useTemplateOverlay'
 import type { Session } from '@supabase/supabase-js'
 import {

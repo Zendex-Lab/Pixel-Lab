@@ -1,5 +1,6 @@
 import { X, User, Clock, Palette, Brush } from 'lucide-react';
 import type { PixelInfo } from '../services/pixelService';
+import { userService } from '../services/userService'
 
 interface PixelInfoPopupProps {
   x: number;

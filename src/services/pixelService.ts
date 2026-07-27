@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { userService } from '../services/userService'
 
 export const pixelService = {
   async loadAllPixels() {
