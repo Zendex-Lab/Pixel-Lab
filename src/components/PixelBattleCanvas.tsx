@@ -1710,9 +1710,9 @@ export default function PixelBattleCanvas({
         </div>
       )}
 
-      {/* ==================== MODALS ==================== */}
+    {/* ==================== MODALS ==================== */}
       {pixelInfoQuery && (
-        <div className="absolute inset-0 z-30 pointer-events-none hidden md:block">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none hidden md:block">
           <div className="pointer-events-auto">
             <PixelInfoPopup
               x={pixelInfoQuery.x}
