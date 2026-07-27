@@ -1095,7 +1095,7 @@ export default function PixelBattleCanvas({
       >
         <canvas
           ref={viewCanvasRef}
-          className="h-full w-full touch-none cursor-crosshair"
+          className="absolute inset-0 h-full w-full touch-none cursor-crosshair z-0"
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}
@@ -1712,19 +1712,21 @@ export default function PixelBattleCanvas({
 
       {/* ==================== MODALS ==================== */}
       {pixelInfoQuery && (
-        <div className="hidden md:block pointer-events-auto">
-          <PixelInfoPopup
-            x={pixelInfoQuery.x}
-            y={pixelInfoQuery.y}
-            loading={pixelInfoQuery.loading}
-            info={pixelInfoQuery.data}
-            paletteHex={PALETTE_HEX}
-            onClose={() => setPixelInfoQuery(null)}
-            onPaint={() => {
-              handleDraftAction(pixelInfoQuery.x, pixelInfoQuery.y)
-              setPixelInfoQuery(null)
-            }}
-          />
+        <div className="absolute inset-0 z-30 pointer-events-none hidden md:block">
+          <div className="pointer-events-auto">
+            <PixelInfoPopup
+              x={pixelInfoQuery.x}
+              y={pixelInfoQuery.y}
+              loading={pixelInfoQuery.loading}
+              info={pixelInfoQuery.data}
+              paletteHex={PALETTE_HEX}
+              onClose={() => setPixelInfoQuery(null)}
+              onPaint={() => {
+                handleDraftAction(pixelInfoQuery.x, pixelInfoQuery.y)
+                setPixelInfoQuery(null)
+              }}
+            />
+          </div>
         </div>
       )}
 
