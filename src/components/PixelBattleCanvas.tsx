@@ -52,7 +52,7 @@ const MAX_CHARGES_GROWTH_PER_PIXEL = 1
 const LIMIT_UPGRADE_STEP = 50
 const CHARGE_PACKS = [50, 100, 200] as const
 const SHOP_COOLDOWN_MS = 5 * 60 * 1000
-const MAX_REGULAR_LIMIT = 2000 
+const MAX_REGULAR_LIMIT = 2000 // Жесткий лимит зарядов для обычных пользователей
 
 const PALETTE_HEX: string[] = [
   '#FFFFFF',
@@ -107,6 +107,10 @@ interface PixelBattleCanvasProps {
   className?: string
 }
 
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export default function PixelBattleCanvas({
   width = GRID_WIDTH,
   height = GRID_HEIGHT,
@@ -137,9 +141,9 @@ export default function PixelBattleCanvas({
   const [pixelInfoQuery, setPixelInfoQuery] = useState<{
     x: number; y: number; loading: boolean; data: PixelInfo | null
   } | null>(null)
+  const infoTapStartRef = useRef<{ x: number; y: number } | null>(null)
 
   // --- Touch & Gesture State Refs ---
-  const infoTapStartRef = useRef<{ x: number; y: number } | null>(null)
   const touchStartDistRef = useRef<number | null>(null)
   const touchStartMidRef = useRef<{ x: number; y: number } | null>(null)
   const touchStartScaleRef = useRef<number>(1)
@@ -150,7 +154,6 @@ export default function PixelBattleCanvas({
   // --- Input & Drag State ---
   const isPointerDownRef = useRef(false)
   const dragButtonRef = useRef<number>(0)
-  const pointerDownPosRef = useRef({ x: 0, y: 0 })
   const lastPointerPosRef = useRef({ x: 0, y: 0 })
   const isShiftPressedRef = useRef(false)
   const lastPaintedTileRef = useRef<{ x: number; y: number } | null>(null)
@@ -200,6 +203,10 @@ export default function PixelBattleCanvas({
   const [shopCooldownEnd, setShopCooldownEnd] = useState<number>(0)
   const [nowTick, setNowTick] = useState(() => Date.now())
 
+  // ==========================================================================
+  // Helper Functions & Business Logic
+  // ==========================================================================
+
   const screenToGrid = useCallback(
     (clientX: number, clientY: number) => {
       const view = viewCanvasRef.current
@@ -221,7 +228,6 @@ export default function PixelBattleCanvas({
 
   const openPixelInfo = useCallback(async (gridX: number, gridY: number) => {
     setPixelInfoQuery({ x: gridX, y: gridY, loading: true, data: null })
-    setIsPaletteOpen(false) 
     try {
       const data = await pixelService.getPixelInfo(gridX, gridY)
       setPixelInfoQuery({ x: gridX, y: gridY, loading: false, data })
@@ -450,6 +456,7 @@ export default function PixelBattleCanvas({
         touchStartDistRef.current &&
         touchStartMidRef.current
       ) {
+
         const touch1 = touches[0]
         const touch2 = touches[1]
         const dx = touch1.clientX - touch2.clientX
@@ -467,8 +474,10 @@ export default function PixelBattleCanvas({
         )
 
         const t = transformRef.current
+
         const startMid = touchStartMidRef.current
         const startOffset = touchStartOffsetRef.current
+
         const worldX = (startMid.x - startOffset.x) / touchStartScaleRef.current
         const worldY = (startMid.y - startOffset.y) / touchStartScaleRef.current
 
@@ -535,7 +544,9 @@ export default function PixelBattleCanvas({
 
   const handleBuyLimitUpgrade = useCallback(async () => {
     if (isShopOnCooldown || !session?.user) return
+
     triggerShopCooldown()
+
     try {
       const result = await userService.buyLimitUpgrade()
       if (!result) return
@@ -551,7 +562,9 @@ export default function PixelBattleCanvas({
   const handleBuyChargePack = useCallback(
     async (amount: number) => {
       if (isShopOnCooldown || !session?.user) return
+
       triggerShopCooldown()
+
       try {
         const result = await userService.buyChargePack(amount)
         if (!result) return
@@ -594,6 +607,7 @@ export default function PixelBattleCanvas({
       scaleLabelRef.current.textContent = `${Math.round(newScale * 100)}%`
   }, [])
 
+  // === hook для установки непассивных слушателей событий ===
   useEffect(() => {
     const canvas = viewCanvasRef.current
     if (!canvas) return
@@ -617,21 +631,19 @@ export default function PixelBattleCanvas({
 
       isPointerDownRef.current = true
       dragButtonRef.current = e.button
-      pointerDownPosRef.current = { x: e.clientX, y: e.clientY }
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY }
       lastPaintedTileRef.current = null
 
       const grid = screenToGrid(e.clientX, e.clientY)
       if (!grid) return
 
-      // Рисовать можно либо с зажатым Shift, либо если включен режим рисования (и нажата левая кнопка)
-      if (e.button === 0 && (isShiftPressedRef.current || isActiveDrawingMode)) {
+      if (e.button === 0 && isShiftPressedRef.current) {
         if (grid.inBounds && handleDraftAction(grid.gridX, grid.gridY)) {
           lastPaintedTileRef.current = { x: grid.gridX, y: grid.gridY }
         }
       }
     },
-    [screenToGrid, handleDraftAction, isActiveDrawingMode],
+    [screenToGrid, handleDraftAction],
   )
 
   const handlePointerMove = useCallback(
@@ -648,7 +660,7 @@ export default function PixelBattleCanvas({
 
       if (!isPointerDownRef.current) return
 
-      if (dragButtonRef.current === 0 && (isShiftPressedRef.current || isActiveDrawingMode)) {
+      if (dragButtonRef.current === 0 && isShiftPressedRef.current) {
         if (grid && grid.inBounds) {
           const last = lastPaintedTileRef.current
           if (!last || last.x !== grid.gridX || last.y !== grid.gridY) {
@@ -665,7 +677,7 @@ export default function PixelBattleCanvas({
       }
       lastPointerPosRef.current = { x: e.clientX, y: e.clientY }
     },
-    [screenToGrid, handleDraftAction, isActiveDrawingMode],
+    [screenToGrid, handleDraftAction],
   )
 
   const handlePointerUp = useCallback(
@@ -676,23 +688,16 @@ export default function PixelBattleCanvas({
       isPointerDownRef.current = false
       lastPaintedTileRef.current = null
 
-      if (wasPointerDown && button === 0) {
-        const dx = Math.abs(e.clientX - pointerDownPosRef.current.x)
-        const dy = Math.abs(e.clientY - pointerDownPosRef.current.y)
-        
-        // Если это был просто клик, а не перетаскивание
-        if (dx < 5 && dy < 5) {
+      if (wasPointerDown && button === 0 && !isShiftPressedRef.current) {
+        const dx = Math.abs(e.clientX - lastPointerPosRef.current.x)
+        const dy = Math.abs(e.clientY - lastPointerPosRef.current.y)
+        if (dx < 3 && dy < 3) {
           const grid = screenToGrid(e.clientX, e.clientY)
-          if (grid && grid.inBounds) {
-             // Открываем инфо, только если мы НЕ в режиме рисования и не зажат Shift
-             if (!isActiveDrawingMode && !isShiftPressedRef.current) {
-               openPixelInfo(grid.gridX, grid.gridY)
-             }
-          }
+          if (grid && grid.inBounds) openPixelInfo(grid.gridX, grid.gridY)
         }
       }
     },
-    [screenToGrid, openPixelInfo, isActiveDrawingMode],
+    [screenToGrid, openPixelInfo],
   )
 
   const zoomBy = useCallback((factor: number) => {
@@ -1088,9 +1093,9 @@ export default function PixelBattleCanvas({
         <div className="pointer-events-none absolute top-4 right-4 glass flex items-center gap-2 px-3.5 py-2 text-xs text-[var(--muted-foreground)] hidden md:flex">
           <Move className="h-4 w-4" />
           <span>
-            Колесо - зум · СКМ - перемещение ·{' '}
+            Колесо - зум · ЛКМ/СКМ перемещение ·{' '}
             <span className="text-[var(--primary)] font-medium">
-              ЛКМ — {isActiveDrawingMode ? 'рисовать' : 'инфо/движение'}
+              Shift+Drag — рисовать
             </span>
           </span>
         </div>
@@ -1517,14 +1522,16 @@ export default function PixelBattleCanvas({
           <button
             type="button"
             onClick={() => {
+              const px = pixelInfoQuery.x
+              const py = pixelInfoQuery.y
               setPixelInfoQuery(null)
+              handleDraftAction(px, py)
               setIsActiveDrawingMode(true)
-              setIsPaletteOpen(true)
             }}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] active:scale-95 transition-all text-sm"
           >
             <Brush className="h-5 w-5" />
-            <span>Рисовать</span>
+            <span>Рисовать тут</span>
           </button>
         </div>
       )}
@@ -1567,7 +1574,7 @@ export default function PixelBattleCanvas({
           </div>
         )}
 
-        {/* Если мы НЕ смотрим информацию о пикселе, показываем обычную панель, иначе инфо-панель */}
+        {/* Если мы НЕ смотрим информацию о пикселе, показываем обычную панель, иначе показываем инфо-панель */}
         {!pixelInfoQuery ? (
           <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
@@ -1608,19 +1615,6 @@ export default function PixelBattleCanvas({
             </div>
 
             <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
-              {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА РИСОВАНИЯ */}
-              <button
-                onClick={() => setIsActiveDrawingMode(!isActiveDrawingMode)}
-                className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
-                  isActiveDrawingMode
-                    ? 'border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
-                }`}
-                title={isActiveDrawingMode ? "Режим кисти (ЛКМ рисует)" : "Режим курсора (ЛКМ инфо/движение)"}
-              >
-                {isActiveDrawingMode ? <Brush className="h-4 w-4 sm:h-5 sm:w-5" /> : <MousePointer2 className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </button>
-
               <button
                 onClick={() => setIsPaletteOpen(!isPaletteOpen)}
                 className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
@@ -1634,7 +1628,6 @@ export default function PixelBattleCanvas({
                   style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
                 />
               </button>
-              
               <button
                 onClick={() => setIsEraserMode(!isEraserMode)}
                 className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
@@ -1678,21 +1671,18 @@ export default function PixelBattleCanvas({
             </div>
           </div>
         ) : (
-          <div className="pointer-events-auto">
-            <PixelInfoPopup
-              x={pixelInfoQuery.x}
-              y={pixelInfoQuery.y}
-              loading={pixelInfoQuery.loading}
-              info={pixelInfoQuery.data}
-              paletteHex={PALETTE_HEX}
-              onClose={() => setPixelInfoQuery(null)}
-              onPaint={() => {
-                setPixelInfoQuery(null)
-                setIsActiveDrawingMode(true) // Включаем режим рисования!
-                setIsPaletteOpen(true)
-              }}
-            />
-          </div>
+          <PixelInfoPopup
+            x={pixelInfoQuery.x}
+            y={pixelInfoQuery.y}
+            loading={pixelInfoQuery.loading}
+            info={pixelInfoQuery.data}
+            paletteHex={PALETTE_HEX}
+            onClose={() => setPixelInfoQuery(null)}
+            onPaint={() => {
+              handleDraftAction(pixelInfoQuery.x, pixelInfoQuery.y)
+              setPixelInfoQuery(null)
+            }}
+          />
         )}
       </div>
 

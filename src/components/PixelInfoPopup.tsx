@@ -35,10 +35,10 @@ export default function PixelInfoPopup({
   onPaint,
 }: PixelInfoPopupProps) {
   return (
-    <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg animate-in slide-in-from-bottom-4 fade-in duration-200 w-max">
+    <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg animate-in slide-in-from-bottom-2 fade-in duration-200 w-max">
       
       {/* Координаты */}
-      <div className="flex flex-col gap-1.5 border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0 min-w-[90px]">
+      <div className="flex flex-col gap-1.5 border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0 min-w-[90px] sm:min-w-[110px]">
         <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
           Пиксель
         </span>
@@ -48,7 +48,7 @@ export default function PixelInfoPopup({
       </div>
 
       {/* Информация (Цвет, Автор, Время) */}
-      <div className="flex items-center gap-3 sm:gap-4 border-r border-[var(--glass-border)] pr-3 sm:pr-5 min-w-[200px]">
+      <div className="flex items-center gap-3 sm:gap-5 border-r border-[var(--glass-border)] pr-3 sm:pr-5 min-w-[180px] sm:min-w-[220px]">
         {loading ? (
           <span className="text-sm text-[var(--muted-foreground)] font-medium px-2">Загрузка...</span>
         ) : info ? (
@@ -61,7 +61,7 @@ export default function PixelInfoPopup({
             <div className="flex flex-col gap-0.5 justify-center">
               <div className="flex items-center gap-1.5 text-sm font-bold text-[var(--foreground)]">
                 <User className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
-                <span className="truncate max-w-[150px]">{info.username ?? 'Аноним'}</span>
+                <span className="truncate max-w-[130px]">{info.username ?? 'Аноним'}</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
                 <Clock className="h-3 w-3" />
@@ -83,7 +83,7 @@ export default function PixelInfoPopup({
           className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]"
         >
           <Brush className="h-4 w-4 sm:h-5 sm:w-5" />
-          <span className="text-xs sm:text-sm">Рисовать</span>
+          <span className="text-xs sm:text-sm">Рисовать тут</span>
         </button>
         <button
           onClick={onClose}
