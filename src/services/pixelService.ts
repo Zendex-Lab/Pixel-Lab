@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase';
-import { userService } from '../services/userService'
+import { userService } from '../services/userService' 
+
+export interface PixelInfo {
+  color_idx: number;
+  username: string | null;
+  updated_at: string;
+}
 
 export const pixelService = {
   async loadAllPixels() {
@@ -39,6 +45,42 @@ export const pixelService = {
     if (error) {
       console.error('Error placing pixel batch:', error);
       throw error;
+    }
+  },
+
+  async getPixelInfo(x: number, y: number): Promise<PixelInfo | null> {
+    try {
+      const { data: pixel, error: pixelError } = await supabase
+        .from('pixels')
+        .select('*')
+        .eq('x', x)
+        .eq('y', y)
+        .maybeSingle();
+
+      if (pixelError) throw pixelError;
+      if (!pixel) return null;
+
+      let username = null;
+      if (pixel.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', pixel.user_id)
+          .maybeSingle();
+        
+        if (profile) {
+          username = profile.username;
+        }
+      }
+
+      return {
+        color_idx: pixel.color_idx,
+        username: username,
+        updated_at: pixel.updated_at || new Date().toISOString(),
+      };
+    } catch (err) {
+      console.error('Ошибка при загрузке инфы о пикселе:', err);
+      throw err;
     }
   },
 
