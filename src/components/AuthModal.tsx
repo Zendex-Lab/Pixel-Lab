@@ -23,11 +23,15 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [resetSent, setResetSent] = useState(false);
   const [resetCooldown, setResetCooldown] = useState(0);
 
+  // --- Post-signup "confirm your email" view state ---
+  const [signupConfirmPending, setSignupConfirmPending] = useState(false);
+
   const isLogin = mode === 'login';
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setError('');
+    setSignupConfirmPending(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,11 +43,20 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       if (mode === 'login') {
         const { error } = await authService.signIn(email, password);
         if (error) throw error;
+        onSuccess();
       } else {
-        const { error } = await authService.signUp(email, password, username);
+        const { data, error } = await authService.signUp(email, password, username);
         if (error) throw error;
+
+        if (!data.session) {
+          // "Confirm email" is enabled in Supabase — signUp succeeds but
+          // doesn't return a session until the user clicks the link in
+          // their inbox. Show that instead of pretending they're logged in.
+          setSignupConfirmPending(true);
+        } else {
+          onSuccess();
+        }
       }
-      onSuccess();
     } catch (err: any) {
       setError(err?.message || 'Произошла ошибка');
     } finally {
@@ -107,7 +120,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         <h3 className="text-xl font-display font-bold mb-6">
           {mode === 'login' && 'Вход в Pixel Lab'}
-          {mode === 'signup' && 'Регистрация'}
+          {mode === 'signup' && (signupConfirmPending ? 'Подтвердите почту' : 'Регистрация')}
           {mode === 'forgot' && 'Восстановление пароля'}
         </h3>
 
@@ -117,7 +130,24 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           </div>
         )}
 
-        {mode === 'forgot' ? (
+        {mode === 'signup' && signupConfirmPending ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-sm">
+              <CheckCircle2 className="h-5 w-5 text-[var(--primary)] shrink-0 mt-0.5" />
+              <span>
+                Проверьте почту для подтверждения. Если письма нет несколько минут —
+                загляните в папку «Спам».
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-3 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all"
+            >
+              Понятно
+            </button>
+          </div>
+        ) : mode === 'forgot' ? (
           resetSent ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-sm">
