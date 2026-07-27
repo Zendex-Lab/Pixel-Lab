@@ -139,7 +139,10 @@ export default function PixelBattleCanvas({
   const [isEraserMode, setIsEraserMode] = useState(false)
   const [isActiveDrawingMode, setIsActiveDrawingMode] = useState(false)
   const [pixelInfoQuery, setPixelInfoQuery] = useState<{
-    x: number; y: number; loading: boolean; data: PixelInfo | null
+    x: number
+    y: number
+    loading: boolean
+    data: PixelInfo | null
   } | null>(null)
   const infoTapStartRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -294,8 +297,8 @@ export default function PixelBattleCanvas({
     const count = drafts.length
 
     try {
-      await pixelService.placePixelsBatch(drafts, session.user.id);
-      
+      await pixelService.placePixelsBatch(drafts, session.user.id)
+
       if (drafts.length > 0) {
         const last = drafts[drafts.length - 1]
         lastUserPaintedPixelRef.current = { x: last.x, y: last.y }
@@ -312,7 +315,8 @@ export default function PixelBattleCanvas({
         })
       }
 
-      let newMaxCharges = maxChargesRef.current + count * MAX_CHARGES_GROWTH_PER_PIXEL
+      let newMaxCharges =
+        maxChargesRef.current + count * MAX_CHARGES_GROWTH_PER_PIXEL
       if (!profile?.is_admin) {
         newMaxCharges = Math.min(newMaxCharges, MAX_REGULAR_LIMIT)
       }
@@ -328,12 +332,13 @@ export default function PixelBattleCanvas({
       setPendingCount(0)
       dirtyRef.current = true
       setIsEraserMode(false)
-
     } catch (error) {
-      console.error("Сервер отклонил пиксели:", error);
-      clearDrafts(); 
-      loadUserProfile(session.user.id);
-      alert("Ошибка при установке пикселей. Возможно, не хватает зарядов или рассинхрон.");
+      console.error('Сервер отклонил пиксели:', error)
+      clearDrafts()
+      loadUserProfile(session.user.id)
+      alert(
+        'Ошибка при установке пикселей. Возможно, не хватает зарядов или рассинхрон.',
+      )
     }
   }, [session, width, profile])
 
@@ -458,7 +463,6 @@ export default function PixelBattleCanvas({
         touchStartDistRef.current &&
         touchStartMidRef.current
       ) {
-
         const touch1 = touches[0]
         const touch2 = touches[1]
         const dx = touch1.clientX - touch2.clientX
@@ -501,7 +505,11 @@ export default function PixelBattleCanvas({
       const touches = e.targetTouches
 
       if (touches.length === 0) {
-        if (!isActiveDrawingMode && infoTapStartRef.current && e.changedTouches.length === 1) {
+        if (
+          !isActiveDrawingMode &&
+          infoTapStartRef.current &&
+          e.changedTouches.length === 1
+        ) {
           const touch = e.changedTouches[0]
           const dx = Math.abs(touch.clientX - infoTapStartRef.current.x)
           const dy = Math.abs(touch.clientY - infoTapStartRef.current.y)
@@ -694,13 +702,16 @@ export default function PixelBattleCanvas({
       if (wasPointerDown && button === 0) {
         const dx = Math.abs(e.clientX - pointerDownPosRef.current.x)
         const dy = Math.abs(e.clientY - pointerDownPosRef.current.y)
-        
+
         // Если это обычный клик, а не перетаскивание
         if (dx < 5 && dy < 5) {
           const grid = screenToGrid(e.clientX, e.clientY)
           if (grid && grid.inBounds) {
             // Если зажат Shift ИЛИ уже есть черновики -> мы в процессе рисования, ставим пиксель
-            if (isShiftPressedRef.current || pendingPixelsRef.current.size > 0) {
+            if (
+              isShiftPressedRef.current ||
+              pendingPixelsRef.current.size > 0
+            ) {
               handleDraftAction(grid.gridX, grid.gridY)
             } else {
               // Если черновиков нет и Shift не зажат -> открываем инфо о пикселе
@@ -793,11 +804,13 @@ export default function PixelBattleCanvas({
 
   const persistCharges = useCallback(() => {
     if (!session?.user) return
-    userService.syncCharges().then(result => {
+    userService.syncCharges().then((result) => {
       if (!result) return
       chargesRef.current = result.charges
       setCharges(result.charges)
-      lastChargeRegenTimeRef.current = new Date(result.last_regen_time).getTime()
+      lastChargeRegenTimeRef.current = new Date(
+        result.last_regen_time,
+      ).getTime()
     })
   }, [session])
 
@@ -833,7 +846,7 @@ export default function PixelBattleCanvas({
       clearInterval(interval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('beforeunload', persistChargesKeepalive)
-      persistCharges() 
+      persistCharges()
     }
   }, [session, persistCharges, persistChargesKeepalive])
 
@@ -891,7 +904,13 @@ export default function PixelBattleCanvas({
       if (tState.enabled && template) {
         ctx.save()
         ctx.globalAlpha = tState.opacity
-        ctx.drawImage(template.canvas, tState.x, tState.y, tState.width, tState.height)
+        ctx.drawImage(
+          template.canvas,
+          tState.x,
+          tState.y,
+          tState.width,
+          tState.height,
+        )
         ctx.restore()
       }
 
@@ -937,11 +956,15 @@ export default function PixelBattleCanvas({
     const resize = () => {
       const dpr = window.devicePixelRatio || 1
       const rect = container.getBoundingClientRect()
-      view.width = rect.width * dpr
-      view.height = rect.height * dpr
-      view.style.width = `${rect.width}px`
-      view.style.height = `${rect.height}px`
-      dirtyRef.current = true
+      const targetWidth = Math.floor(rect.width * dpr)
+      const targetHeight = Math.floor(rect.height * dpr)
+      if (view.width !== targetWidth || view.height !== targetHeight) {
+        view.width = targetWidth
+        view.height = targetHeight
+        view.style.width = `${rect.width}px`
+        view.style.height = `${rect.height}px`
+        dirtyRef.current = true
+      }
     }
     resize()
     const observer = new ResizeObserver(resize)
@@ -982,9 +1005,7 @@ export default function PixelBattleCanvas({
       const remainder = elapsed % CHARGE_REGEN_MS
 
       lastChargeRegenTimeRef.current =
-        catchUpCharges >= data.max_charges
-          ? Date.now()
-          : Date.now() - remainder
+        catchUpCharges >= data.max_charges ? Date.now() : Date.now() - remainder
 
       chargesRef.current = catchUpCharges
       setCharges(catchUpCharges)
@@ -1065,12 +1086,12 @@ export default function PixelBattleCanvas({
 
   return (
     <div
-      className={`relative flex h-full w-full flex-col font-sans touch-none ${className}`}
+      className={`relative h-full w-full overflow-hidden font-sans touch-none ${className}`}
       style={{ background: 'var(--page-bg) fixed', color: 'var(--foreground)' }}
     >
       <div
         ref={containerRef}
-        className="relative flex-1 overflow-hidden touch-none"
+        className="absolute inset-0 overflow-hidden touch-none"
       >
         <canvas
           ref={viewCanvasRef}
@@ -1507,13 +1528,18 @@ export default function PixelBattleCanvas({
           </div>
 
           {pixelInfoQuery.loading ? (
-            <p className="text-sm text-[var(--muted-foreground)]">Загрузка...</p>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              Загрузка...
+            </p>
           ) : pixelInfoQuery.data ? (
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <span
                   className="h-4 w-4 rounded border border-[var(--glass-border)] shrink-0"
-                  style={{ backgroundColor: PALETTE_HEX[pixelInfoQuery.data.color_idx] ?? '#000' }}
+                  style={{
+                    backgroundColor:
+                      PALETTE_HEX[pixelInfoQuery.data.color_idx] ?? '#000',
+                  }}
                 />
                 <span className="text-[var(--muted-foreground)]">
                   Автор:{' '}
@@ -1523,7 +1549,9 @@ export default function PixelBattleCanvas({
                 </span>
               </div>
               <div className="text-[var(--muted-foreground)] text-xs">
-                {new Date(pixelInfoQuery.data.updated_at).toLocaleString('ru-RU')}
+                {new Date(pixelInfoQuery.data.updated_at).toLocaleString(
+                  'ru-RU',
+                )}
               </div>
             </div>
           ) : (
@@ -1548,137 +1576,139 @@ export default function PixelBattleCanvas({
       )}
 
       {/* ==================== DESKTOP BOTTOM FLOATING BAR ==================== */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none hidden md:flex flex-col items-center gap-3">
-        {isPaletteOpen && (
-          <div className="pointer-events-auto w-full max-w-[320px] glass-strong p-4 rounded-2xl shadow-2xl border border-[var(--glass-border)] animate-in fade-in slide-in-from-bottom-3 duration-200">
-            <div className="flex items-center justify-between mb-3 border-b border-[var(--glass-border)] pb-2">
-              <span className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider flex items-center gap-1.5">
-                <Palette className="h-4 w-4 text-[var(--primary)]" /> Выберите
-                цвет
-              </span>
+      {!pixelInfoQuery && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none hidden md:flex flex-col items-center gap-3">
+          {isPaletteOpen && (
+            <div className="pointer-events-auto w-full max-w-[320px] glass-strong p-4 rounded-2xl shadow-2xl border border-[var(--glass-border)] animate-in fade-in slide-in-from-bottom-3 duration-200">
+              <div className="flex items-center justify-between mb-3 border-b border-[var(--glass-border)] pb-2">
+                <span className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider flex items-center gap-1.5">
+                  <Palette className="h-4 w-4 text-[var(--primary)]" /> Выберите
+                  цвет
+                </span>
+                <button
+                  onClick={() => setIsPaletteOpen(false)}
+                  className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--glass-bg)]"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid grid-cols-8 gap-2">
+                {PALETTE_HEX.map((hex, i) => (
+                  <button
+                    key={hex}
+                    onClick={() => {
+                      setSelectedColorIndex(i)
+                      setIsEraserMode(false)
+                    }}
+                    className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg border-2 transition-transform hover:scale-110 focus-ring ${
+                      selectedColorIndex === i && !isEraserMode
+                        ? 'border-[var(--primary)] scale-110 ring-glow'
+                        : 'border-[var(--glass-border)]'
+                    }`}
+                    style={{ backgroundColor: hex }}
+                    title={`Цвет ${hex}`}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg">
+            <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
+                  <Zap
+                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${charges > 0 ? 'text-[var(--accent)]' : 'text-[var(--destructive)]'}`}
+                  />
+                  Заряды
+                </span>
+                <span
+                  className="font-retro8bit text-base sm:text-lg font-bold"
+                  style={{ fontFamily: 'var(--font-display)' }}
+                >
+                  {pendingCount > 0 ? (
+                    <span className="text-amber-400">
+                      {charges - pendingCount}
+                    </span>
+                  ) : charges === maxCharges ? (
+                    'MAX'
+                  ) : (
+                    charges
+                  )}
+                  <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">
+                    / {maxCharges}
+                  </span>
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
+                  style={{
+                    width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
+                    transition: charges < maxCharges ? 'none' : 'width 0.3s',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
               <button
-                onClick={() => setIsPaletteOpen(false)}
-                className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--glass-bg)]"
+                onClick={() => setIsPaletteOpen(!isPaletteOpen)}
+                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
               >
-                <X className="h-4 w-4" />
+                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--primary)]" />
+                <span className="text-sm font-medium hidden sm:inline">
+                  Палитра
+                </span>
+                <div
+                  className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner"
+                  style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
+                />
+              </button>
+              <button
+                onClick={() => setIsEraserMode(!isEraserMode)}
+                className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
+                  isEraserMode
+                    ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
+                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
+                }`}
+                title="Ластик (стирает черновики)"
+              >
+                <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
-            <div className="grid grid-cols-8 gap-2">
-              {PALETTE_HEX.map((hex, i) => (
-                <button
-                  key={hex}
-                  onClick={() => {
-                    setSelectedColorIndex(i)
-                    setIsEraserMode(false)
-                  }}
-                  className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg border-2 transition-transform hover:scale-110 focus-ring ${
-                    selectedColorIndex === i && !isEraserMode
-                      ? 'border-[var(--primary)] scale-110 ring-glow'
-                      : 'border-[var(--glass-border)]'
-                  }`}
-                  style={{ backgroundColor: hex }}
-                  title={`Цвет ${hex}`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
 
-        <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg">
-          <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
-                <Zap
-                  className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${charges > 0 ? 'text-[var(--accent)]' : 'text-[var(--destructive)]'}`}
-                />
-                Заряды
-              </span>
-              <span
-                className="font-retro8bit text-base sm:text-lg font-bold"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {pendingCount > 0 ? (
-                  <span className="text-amber-400">
-                    {charges - pendingCount}
-                  </span>
-                ) : charges === maxCharges ? (
-                  'MAX'
-                ) : (
-                  charges
-                )}
-                <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">
-                  / {maxCharges}
+            <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
+              {pendingCount > 0 ? (
+                <>
+                  <button
+                    onClick={handleConfirmDrafts}
+                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] animate-in zoom-in-95"
+                  >
+                    <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <span className="text-xs sm:text-sm">
+                      Подтвердить ({pendingCount})
+                    </span>
+                  </button>
+                  <button
+                    onClick={clearDrafts}
+                    className="p-2 sm:p-2.5 rounded-xl border border-[var(--destructive)]/50 bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-all active:scale-95 animate-in zoom-in-95"
+                    title="Очистить черновик"
+                  >
+                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </>
+              ) : (
+                <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
+                  Нарисуйте пиксели,
+                  <br />
+                  чтобы подтвердить
                 </span>
-              </span>
+              )}
             </div>
-            <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
-                style={{
-                  width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
-                  transition: charges < maxCharges ? 'none' : 'width 0.3s',
-                }}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
-            <button
-              onClick={() => setIsPaletteOpen(!isPaletteOpen)}
-              className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
-            >
-              <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--primary)]" />
-              <span className="text-sm font-medium hidden sm:inline">
-                Палитра
-              </span>
-              <div
-                className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner"
-                style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
-              />
-            </button>
-            <button
-              onClick={() => setIsEraserMode(!isEraserMode)}
-              className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
-                isEraserMode
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                  : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
-              }`}
-              title="Ластик (стирает черновики)"
-            >
-              <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
-            {pendingCount > 0 ? (
-              <>
-                <button
-                  onClick={handleConfirmDrafts}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] animate-in zoom-in-95"
-                >
-                  <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                  <span className="text-xs sm:text-sm">
-                    Подтвердить ({pendingCount})
-                  </span>
-                </button>
-                <button
-                  onClick={clearDrafts}
-                  className="p-2 sm:p-2.5 rounded-xl border border-[var(--destructive)]/50 bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-all active:scale-95 animate-in zoom-in-95"
-                  title="Очистить черновик"
-                >
-                  <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-                </button>
-              </>
-            ) : (
-              <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
-                Нарисуйте пиксели,
-                <br />
-                чтобы подтвердить
-              </span>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* ==================== MODALS ==================== */}
       {pixelInfoQuery && (
