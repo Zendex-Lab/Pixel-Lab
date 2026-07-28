@@ -87,7 +87,7 @@ export default function SettingsModal({
                 Pixel Lab v0.6
               </h4>
               <p className="text-xs text-[var(--muted-foreground)]">
-                By Zendex Lab, ООО "БРОТИШКА БРО"
+                By Zendex Lab, ООО "БРОТИШКА БРО", Sonic Junction Team
               </p>
             </div>
           </div>
