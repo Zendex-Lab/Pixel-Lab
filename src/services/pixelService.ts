@@ -61,11 +61,11 @@ export const pixelService = {
       if (!pixel) return null;
 
       let username = null;
-      if (pixel.user_id) {
+      if (pixel.updated_by) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('username')
-          .eq('id', pixel.user_id)
+          .eq('id', pixel.updated_by)
           .maybeSingle();
         
         if (profile) {
