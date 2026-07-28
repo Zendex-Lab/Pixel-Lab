@@ -84,7 +84,7 @@ export default function SettingsModal({
             <Info className="h-5 w-5 text-[var(--primary)] mt-0.5 shrink-0" />
             <div>
               <h4 className="text-sm font-bold text-[var(--foreground)]">
-                Pixel Lab v0.6
+                Pixel Lab v0.7
               </h4>
               <p className="text-xs text-[var(--muted-foreground)]">
                 By Zendex Lab, ООО "БРОТИШКА БРО", Sonic Junction Team
