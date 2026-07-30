@@ -1,6 +1,4 @@
 import { supabase } from '../lib/supabase'
-import { userService } from '../services/userService'
-
 export interface PixelInfo {
   color_idx: number
   username: string | null
@@ -148,7 +146,7 @@ export const pixelService = {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'pixels' },
-        (payload) => {
+        (payload: any) => {
           const newRow = payload.new as {
             x: number
             y: number

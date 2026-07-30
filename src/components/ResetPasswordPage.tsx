@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event: any) => {
       if (event === 'PASSWORD_RECOVERY') {
         settled = true
         setStatus('ready')
@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
     })
 
     // Fallback in case the event fired a tick before this listener attached.
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: any) => {
       if (!settled && data.session) {
         settled = true
         setStatus('ready')

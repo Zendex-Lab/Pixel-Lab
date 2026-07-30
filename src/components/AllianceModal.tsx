@@ -7,16 +7,13 @@ import {
   Plus,
   Search,
   Crown,
-  Settings,
   Trash2,
-  ChevronRight,
 } from 'lucide-react'
 import {
   allianceService,
   type Alliance,
   type AllianceMember,
 } from '../services/allianceService'
-import { authService } from '../services/authService'
 
 interface AllianceModalProps {
   onClose: () => void

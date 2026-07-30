@@ -93,7 +93,7 @@ export const allianceService = {
 
     // Try to get member counts for each
     const alliancesWithCounts = await Promise.all(
-      data.map(async (alliance) => {
+      data.map(async (alliance: any) => {
         const { count } = await supabase
           .from('alliance_members')
           .select('*', { count: 'exact', head: true })

@@ -29,14 +29,14 @@ export default function AuthConfirmPage() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session) {
         settled = true
         setStatus('ok')
       }
     })
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: any) => {
       if (!settled && data.session) {
         settled = true
         setStatus('ok')
