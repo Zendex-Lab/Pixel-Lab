@@ -84,6 +84,27 @@ export const pixelService = {
     }
   },
 
+  // Админская заливка прямоугольной области одним RPC-вызовом.
+  // Права проверяются на бэкенде (см. миграцию admin_fill_area.sql) — без лимитов
+  // на заряды/кулдаун, но с серверным потолком на размер области.
+  // Возвращает количество заполненных ячеек.
+  async adminFillArea(minX: number, minY: number, maxX: number, maxY: number, colorIdx: number): Promise<number> {
+    const { data, error } = await supabase.rpc('admin_fill_area', {
+      p_min_x: minX,
+      p_min_y: minY,
+      p_max_x: maxX,
+      p_max_y: maxY,
+      p_color_idx: colorIdx,
+    });
+
+    if (error) {
+      console.error('Error filling area:', error);
+      throw error;
+    }
+
+    return (data as number) ?? 0;
+  },
+
   subscribeToPixels(onUpdate: (payload: { x: number; y: number; color_idx: number }) => void) {
     const channel = supabase
       .channel('public:pixels')

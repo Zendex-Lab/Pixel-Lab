@@ -1761,6 +1761,9 @@ export default function PixelBattleCanvas({
           onClose={() => setIsAdminOpen(false)}
           currentUserId={session.user.id}
           onSuccess={() => loadUserProfile(session.user.id)}
+          gridWidth={width}
+          gridHeight={height}
+          paletteHex={PALETTE_HEX}
         />
       )}
 
