@@ -49,6 +49,11 @@ export default function AllianceModal({
     'my_alliance',
   )
 
+  // Viewing Other Alliance State
+  const [viewingAlliance, setViewingAlliance] = useState<Alliance | null>(null)
+  const [viewingMembers, setViewingMembers] = useState<AllianceMember[]>([])
+  const [loadingView, setLoadingView] = useState(false)
+
   const loadData = async () => {
     setLoading(true)
     try {
@@ -78,14 +83,31 @@ export default function AllianceModal({
 
   useEffect(() => {
     // Only search automatically if we are exploring or have no alliance and are not creating
-    if ((!userAlliance || activeTab === 'explore') && !isCreating) {
+    if (
+      (!userAlliance || activeTab === 'explore') &&
+      !isCreating &&
+      !viewingAlliance
+    ) {
       const delaySearch = setTimeout(async () => {
         const results = await allianceService.searchAlliances(searchQuery)
         setAlliances(results)
       }, 300)
       return () => clearTimeout(delaySearch)
     }
-  }, [searchQuery, userAlliance, isCreating, activeTab])
+  }, [searchQuery, userAlliance, isCreating, activeTab, viewingAlliance])
+
+  const handleViewAlliance = async (alliance: Alliance) => {
+    setViewingAlliance(alliance)
+    setLoadingView(true)
+    try {
+      const mems = await allianceService.getAllianceMembers(alliance.id)
+      setViewingMembers(mems)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoadingView(false)
+    }
+  }
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -197,21 +219,13 @@ export default function AllianceModal({
               <div className="flex items-center gap-2 p-1 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)]">
                 <button
                   onClick={() => setActiveTab('my_alliance')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                    activeTab === 'my_alliance'
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
-                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                  }`}
+                  className="flex-1 py-2 text-sm font-bold rounded-lg transition-all bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md"
                 >
                   Мой альянс
                 </button>
                 <button
                   onClick={() => setActiveTab('explore')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                    activeTab === 'explore'
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
-                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                  }`}
+                  className="flex-1 py-2 text-sm font-bold rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                 >
                   Поиск
                 </button>
@@ -402,79 +416,59 @@ export default function AllianceModal({
                 <div className="flex items-center gap-2 p-1 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] mb-4">
                   <button
                     onClick={() => setActiveTab('my_alliance')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                      activeTab === 'my_alliance'
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
-                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                    }`}
+                    className="flex-1 py-2 text-sm font-bold rounded-lg transition-all text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                   >
                     Мой альянс
                   </button>
                   <button
                     onClick={() => setActiveTab('explore')}
-                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                      activeTab === 'explore'
-                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
-                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-                    }`}
+                    className="flex-1 py-2 text-sm font-bold rounded-lg transition-all bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md"
                   >
                     Поиск
                   </button>
                 </div>
               )}
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted-foreground)]" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Поиск альянсов..."
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] focus:border-[var(--primary)] outline-none transition-colors text-sm"
-                  />
-                </div>
-                <button
-                  onClick={() => setIsCreating(true)}
-                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shrink-0"
-                >
-                  <Plus className="h-5 w-5" />
-                  Создать
-                </button>
-              </div>
+              {viewingAlliance ? (
+                // === VIEWING ANOTHER ALLIANCE ===
+                <div className="space-y-6 animate-in slide-in-from-right-4 fade-in">
+                  <button
+                    type="button"
+                    onClick={() => setViewingAlliance(null)}
+                    className="flex items-center gap-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors mb-2"
+                  >
+                    ← К результатам поиска
+                  </button>
 
-              <div className="grid grid-cols-1 gap-3">
-                {alliances.length === 0 ? (
-                  <div className="text-center py-10 text-[var(--muted-foreground)] text-sm">
-                    Альянсы не найдены.
-                  </div>
-                ) : (
-                  alliances.map((alliance) => (
-                    <div
-                      key={alliance.id}
-                      className="flex items-center p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] transition-colors group"
-                    >
-                      <div className="h-12 w-12 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] flex items-center justify-center text-2xl mr-4 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
-                        {alliance.emoji}
-                      </div>
-                      <div className="flex-1 min-w-0 pr-4">
-                        <h4 className="text-base font-bold truncate">
-                          {alliance.name}
+                  <div className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] relative overflow-hidden">
+                    <div className="absolute -right-4 -bottom-4 text-8xl opacity-5 pointer-events-none blur-sm">
+                      {viewingAlliance.emoji}
+                    </div>
+
+                    <div className="h-16 w-16 rounded-2xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] flex items-center justify-center text-3xl shadow-inner shrink-0 z-10">
+                      {viewingAlliance.emoji}
+                    </div>
+
+                    <div className="flex-1 z-10">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="text-xl font-bold">
+                          {viewingAlliance.name}
                         </h4>
-                        {alliance.description && (
-                          <p className="text-xs text-[var(--muted-foreground)] truncate max-w-[90%]">
-                            {alliance.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">
-                          <Users className="h-3 w-3" />
-                          <span>
-                            Участников: {alliance.member_count ?? '?'}
-                          </span>
-                        </div>
                       </div>
+                      {viewingAlliance.description && (
+                        <p className="text-sm text-[var(--muted-foreground)] mb-2">
+                          {viewingAlliance.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>Участников: {viewingMembers.length}</span>
+                      </div>
+                    </div>
+
+                    <div className="z-10 self-start">
                       <button
-                        onClick={() => handleJoin(alliance.id)}
+                        onClick={() => handleJoin(viewingAlliance.id)}
                         disabled={!!userAlliance}
                         title={
                           userAlliance ? 'Вы уже состоите в альянсе' : undefined
@@ -484,9 +478,125 @@ export default function AllianceModal({
                         Вступить
                       </button>
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+
+                  <div>
+                    <h5 className="text-sm font-semibold mb-3 flex items-center gap-2 text-[var(--muted-foreground)] uppercase tracking-wider">
+                      <Users className="h-4 w-4" /> Список участников
+                    </h5>
+                    {loadingView ? (
+                      <div className="text-sm text-[var(--muted-foreground)]">
+                        Загрузка...
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {viewingMembers.map((member) => (
+                          <div
+                            key={member.user_id}
+                            className="flex items-center justify-between p-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)]"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`h-8 w-8 rounded-full flex items-center justify-center border ${member.role === 'owner' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-[var(--glass-bg-strong)] border-[var(--glass-border)] text-[var(--muted-foreground)]'}`}
+                              >
+                                {member.role === 'owner' ? (
+                                  <Crown className="h-4 w-4" />
+                                ) : (
+                                  <Users className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div>
+                                <div className="text-sm font-bold flex items-center gap-2">
+                                  {member.user_profiles?.username || 'Unknown'}
+                                </div>
+                                <div className="text-xs text-[var(--muted-foreground)]">
+                                  Присоединился{' '}
+                                  {new Date(
+                                    member.joined_at,
+                                  ).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted-foreground)]" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Поиск альянсов..."
+                        className="w-full pl-10 pr-4 py-3 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] focus:border-[var(--primary)] outline-none transition-colors text-sm"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setIsCreating(true)}
+                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shrink-0"
+                    >
+                      <Plus className="h-5 w-5" />
+                      Создать
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {alliances.length === 0 ? (
+                      <div className="text-center py-10 text-[var(--muted-foreground)] text-sm">
+                        Альянсы не найдены.
+                      </div>
+                    ) : (
+                      alliances.map((alliance) => (
+                        <div
+                          key={alliance.id}
+                          onClick={() => handleViewAlliance(alliance)}
+                          className="flex items-center p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] transition-colors group cursor-pointer"
+                        >
+                          <div className="h-12 w-12 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] flex items-center justify-center text-2xl mr-4 shrink-0 shadow-inner group-hover:scale-105 transition-transform">
+                            {alliance.emoji}
+                          </div>
+                          <div className="flex-1 min-w-0 pr-4">
+                            <h4 className="text-base font-bold truncate group-hover:text-[var(--primary)] transition-colors">
+                              {alliance.name}
+                            </h4>
+                            {alliance.description && (
+                              <p className="text-xs text-[var(--muted-foreground)] truncate max-w-[90%]">
+                                {alliance.description}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-1.5 mt-1 text-[10px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">
+                              <Users className="h-3 w-3" />
+                              <span>
+                                Участников: {alliance.member_count ?? '?'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleJoin(alliance.id)
+                            }}
+                            disabled={!!userAlliance}
+                            title={
+                              userAlliance
+                                ? 'Вы уже состоите в альянсе'
+                                : undefined
+                            }
+                            className="px-4 py-2 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] font-bold transition-all text-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--primary)]/10 disabled:hover:text-[var(--primary)]"
+                          >
+                            Вступить
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
