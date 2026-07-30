@@ -26,7 +26,10 @@ const DEFAULT_STATE: TemplateOverlayState = {
 // Защита от слишком тяжёлой квантизации на большом шаблоне.
 const MAX_TEMPLATE_DIMENSION = 512
 
-export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) {
+export function useTemplateOverlay(
+  paletteHex: string[],
+  markDirty: () => void,
+) {
   const [state, setState] = useState<TemplateOverlayState>(DEFAULT_STATE)
   const sourceImageRef = useRef<HTMLImageElement | null>(null)
   const nativeAspectRef = useRef(1)
@@ -36,9 +39,20 @@ export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) 
     (w: number, h: number) => {
       const img = sourceImageRef.current
       if (!img) return
-      const clampedW = Math.min(MAX_TEMPLATE_DIMENSION, Math.max(1, Math.round(w)))
-      const clampedH = Math.min(MAX_TEMPLATE_DIMENSION, Math.max(1, Math.round(h)))
-      quantizedRef.current = quantizeImageToPalette(img, clampedW, clampedH, paletteHex)
+      const clampedW = Math.min(
+        MAX_TEMPLATE_DIMENSION,
+        Math.max(1, Math.round(w)),
+      )
+      const clampedH = Math.min(
+        MAX_TEMPLATE_DIMENSION,
+        Math.max(1, Math.round(h)),
+      )
+      quantizedRef.current = quantizeImageToPalette(
+        img,
+        clampedW,
+        clampedH,
+        paletteHex,
+      )
       markDirty()
     },
     [paletteHex, markDirty],
@@ -52,9 +66,12 @@ export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) 
         sourceImageRef.current = img
         nativeAspectRef.current = img.naturalWidth / img.naturalHeight
 
-        setState(prev => {
+        setState((prev) => {
           const width = Math.min(MAX_TEMPLATE_DIMENSION, prev.width || 64)
-          const height = Math.max(1, Math.round(width / nativeAspectRef.current))
+          const height = Math.max(
+            1,
+            Math.round(width / nativeAspectRef.current),
+          )
           requantize(width, height)
           return { ...prev, enabled: true, hasImage: true, width, height }
         })
@@ -68,7 +85,7 @@ export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) 
 
   const setPosition = useCallback(
     (x: number, y: number) => {
-      setState(prev => ({ ...prev, x: Math.round(x), y: Math.round(y) }))
+      setState((prev) => ({ ...prev, x: Math.round(x), y: Math.round(y) }))
       markDirty()
     },
     [markDirty],
@@ -76,7 +93,7 @@ export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) 
 
   const setSize = useCallback(
     (width: number, height: number) => {
-      setState(prev => {
+      setState((prev) => {
         const nextWidth = Math.max(1, Math.round(width))
         const nextHeight = prev.lockAspect
           ? Math.max(1, Math.round(nextWidth / nativeAspectRef.current))
@@ -90,18 +107,21 @@ export function useTemplateOverlay(paletteHex: string[], markDirty: () => void) 
 
   const setOpacity = useCallback(
     (opacity: number) => {
-      setState(prev => ({ ...prev, opacity: Math.min(1, Math.max(0, opacity)) }))
+      setState((prev) => ({
+        ...prev,
+        opacity: Math.min(1, Math.max(0, opacity)),
+      }))
       markDirty()
     },
     [markDirty],
   )
 
   const setLockAspect = useCallback((lockAspect: boolean) => {
-    setState(prev => ({ ...prev, lockAspect }))
+    setState((prev) => ({ ...prev, lockAspect }))
   }, [])
 
   const toggleEnabled = useCallback(() => {
-    setState(prev => ({ ...prev, enabled: !prev.enabled }))
+    setState((prev) => ({ ...prev, enabled: !prev.enabled }))
     markDirty()
   }, [markDirty])
 

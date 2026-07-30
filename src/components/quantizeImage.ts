@@ -77,7 +77,12 @@ export function quantizeImageToPalette(
       outImage.data[o + 3] = 0
       continue
     }
-    const idx = nearestPaletteIndex(data[o], data[o + 1], data[o + 2], paletteRgb)
+    const idx = nearestPaletteIndex(
+      data[o],
+      data[o + 1],
+      data[o + 2],
+      paletteRgb,
+    )
     const [pr, pg, pb] = paletteRgb[idx]
     outImage.data[o] = pr
     outImage.data[o + 1] = pg

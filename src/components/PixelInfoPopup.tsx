@@ -1,14 +1,14 @@
-import { X, User, Clock, Brush } from 'lucide-react';
-import type { PixelInfo } from '../services/pixelService';
+import { X, User, Clock, Brush } from 'lucide-react'
+import type { PixelInfo } from '../services/pixelService'
 
 interface PixelInfoPopupProps {
-  x: number;
-  y: number;
-  loading: boolean;
-  info: PixelInfo | null;
-  paletteHex: string[];
-  onClose: () => void;
-  onPaint: () => void;
+  x: number
+  y: number
+  loading: boolean
+  info: PixelInfo | null
+  paletteHex: string[]
+  onClose: () => void
+  onPaint: () => void
 }
 
 function formatTime(iso: string) {
@@ -19,9 +19,9 @@ function formatTime(iso: string) {
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    });
+    })
   } catch {
-    return iso;
+    return iso
   }
 }
 
@@ -36,13 +36,15 @@ export default function PixelInfoPopup({
 }: PixelInfoPopupProps) {
   return (
     <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg animate-in slide-in-from-bottom-2 fade-in duration-200 w-max">
-      
       {/* Координаты */}
       <div className="flex flex-col gap-1.5 border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0 min-w-[90px] sm:min-w-[110px]">
         <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
           Пиксель
         </span>
-        <span className="font-retro8bit text-base sm:text-lg font-bold" style={{ fontFamily: 'var(--font-display)' }}>
+        <span
+          className="font-retro8bit text-base sm:text-lg font-bold"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           {x}, {y}
         </span>
       </div>
@@ -50,7 +52,9 @@ export default function PixelInfoPopup({
       {/* Информация (Цвет, Автор, Время) */}
       <div className="flex items-center gap-3 sm:gap-5 border-r border-[var(--glass-border)] pr-3 sm:pr-5 min-w-[180px] sm:min-w-[220px]">
         {loading ? (
-          <span className="text-sm text-[var(--muted-foreground)] font-medium px-2">Загрузка...</span>
+          <span className="text-sm text-[var(--muted-foreground)] font-medium px-2">
+            Загрузка...
+          </span>
         ) : info ? (
           <>
             <div
@@ -61,9 +65,19 @@ export default function PixelInfoPopup({
             <div className="flex flex-col gap-0.5 justify-center">
               <div className="flex items-center gap-1.5 text-sm font-bold text-[var(--foreground)]">
                 <User className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
-                <span className="truncate max-w-[130px]">{info.username ?? 'Аноним'}</span>
+                <span className="truncate max-w-[130px]">
+                  {info.username ?? 'Аноним'}
+                </span>
+                {info.alliance_name && info.alliance_emoji && (
+                  <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-[var(--glass-border)] bg-[var(--glass-bg)] text-[10px] sm:text-xs">
+                    <span>{info.alliance_emoji}</span>
+                    <span className="truncate max-w-[60px] sm:max-w-[80px] text-[var(--muted-foreground)]">
+                      {info.alliance_name}
+                    </span>
+                  </span>
+                )}
               </div>
-              <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] mt-0.5">
                 <Clock className="h-3 w-3" />
                 <span>{formatTime(info.updated_at)}</span>
               </div>
@@ -94,5 +108,5 @@ export default function PixelInfoPopup({
         </button>
       </div>
     </div>
-  );
+  )
 }

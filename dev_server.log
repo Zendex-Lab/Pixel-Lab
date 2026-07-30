@@ -3,7 +3,7 @@
 > vite dev --port 3000
 
 
-  VITE v8.1.5  ready in 1370 ms
+  VITE v8.1.5  ready in 1343 ms
 
   ➜  Local:   http://localhost:3000/
   ➜  Network: use --host to expose
@@ -16,19 +16,145 @@ LOG /src/lib/supabase.ts:19:3
 [Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
 [Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
 [Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
-[Client] src/services/pixelService.ts:82:7 Ошибка при загрузке инфы о пикселе: {
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/components/AllianceModal.tsx:66:7 {
   name: 'TypeError',
-  message: 'supabase.from(...).select(...).eq(...).eq is not a function',
-  stack: 'TypeError: supabase.from(...).select(...).eq(...).eq is not a function\n' +
-    '    at Object.getPixelInfo (http://localhost:3000/src/services/pixelService.ts:51:100)\n' +
-    '    at http://localhost:3000/src/components/PixelBattleCanvas.tsx:184:36\n' +
-    '    at http://localhost:3000/src/components/PixelBattleCanvas.tsx:632:7\n' +
-    '    at executeDispatch (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:9141:5)\n' +
-    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:851:66)\n' +
-    '    at processDispatchQueue (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:9167:27)\n' +
-    '    at http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:9454:5\n' +
-    '    at batchedUpdates$1 (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:2044:12)\n' +
-    '    at dispatchEventForPluginEventSystem (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:9240:4)\n' +
-    '    at dispatchEvent (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=521d4f95:11319:29)'
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7618:22)\n' +
+    '    at recursivelyTraversePassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7606:5)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7672:14)'
 }
-Warning: A notFoundError was encountered on the route with ID "__root__", but a notFoundComponent option was not configured, nor was a router level defaultNotFoundComponent configured. Consider configuring at least one of these to avoid TanStack Router's overly generic defaultNotFoundComponent (<p>Not Found</p>)
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at reconnectPassiveEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7701:6)\n' +
+    '    at doubleInvokeEffectsOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:8924:125)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)'
+}
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7618:22)\n' +
+    '    at recursivelyTraversePassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7606:5)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7672:14)'
+}
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at reconnectPassiveEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7701:6)\n' +
+    '    at doubleInvokeEffectsOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:8924:125)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)'
+}
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7618:22)\n' +
+    '    at recursivelyTraversePassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7606:5)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7672:14)'
+}
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at reconnectPassiveEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7701:6)\n' +
+    '    at doubleInvokeEffectsOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:8924:125)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)'
+}
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7618:22)\n' +
+    '    at recursivelyTraversePassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7606:5)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7672:14)'
+}
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at handleCreate (http://localhost:3000/src/components/AllianceModal.tsx:72:10)'
+}
+[Client] src/components/AllianceModal.tsx:66:7 {
+  name: 'TypeError',
+  message: 'supabase.from(...).select(...).eq(...).maybeSingle is not a function',
+  stack: 'TypeError: supabase.from(...).select(...).eq(...).maybeSingle is not a function\n' +
+    '    at Object.getUserAlliance (http://localhost:3000/src/services/allianceService.ts:72:142)\n' +
+    '    at loadData (http://localhost:3000/src/components/AllianceModal.tsx:26:44)\n' +
+    '    at http://localhost:3000/src/components/AllianceModal.tsx:48:3\n' +
+    '    at Object.react_stack_bottom_frame (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:12902:13)\n' +
+    '    at runWithFiberInDEV (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:851:66)\n' +
+    '    at commitHookEffectListMount (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6617:153)\n' +
+    '    at commitHookPassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:6652:55)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7618:22)\n' +
+    '    at recursivelyTraversePassiveMountEffects (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7606:5)\n' +
+    '    at commitPassiveMountOnFiber (http://localhost:3000/node_modules/.vite/deps/react-dom_client.js?v=c3f4c092:7672:14)'
+}

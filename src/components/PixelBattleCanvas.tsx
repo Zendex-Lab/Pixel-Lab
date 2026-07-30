@@ -8,6 +8,7 @@ import SettingsModal from './SettingsModal'
 import AdminModal from './AdminModal'
 import TemplateOverlayModal from './TemplateOverlayModal'
 import PixelInfoPopup from './PixelInfoPopup'
+import AllianceModal from './AllianceModal'
 import { userService } from '../services/userService'
 import { useTemplateOverlay } from './useTemplateOverlay'
 import type { Session } from '@supabase/supabase-js'
@@ -180,6 +181,7 @@ export default function PixelBattleCanvas({
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false)
   const [selectedColorIndex, setSelectedColorIndex] = useState(4)
   const [isTemplateOpen, setIsTemplateOpen] = useState(false)
+  const [isAllianceOpen, setIsAllianceOpen] = useState(false)
   const templateOverlay = useTemplateOverlay(PALETTE_HEX, () => {
     dirtyRef.current = true
   })
@@ -1161,6 +1163,16 @@ export default function PixelBattleCanvas({
             <ImagePlus className="h-4 w-4" />
           </button>
           <button
+            onClick={() => {
+              if (session) setIsAllianceOpen(true)
+              else setIsAuthModalOpen(true)
+            }}
+            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
+            title="Альянсы"
+          >
+            <Shield className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => setIsMobileProfileOpen(true)}
             className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
             title="Профиль"
@@ -1214,6 +1226,17 @@ export default function PixelBattleCanvas({
             title="Шаблон-подсказка"
           >
             <ImagePlus className="h-5 w-5" />
+          </button>
+          <div className="h-px w-full bg-[var(--glass-border)]" />
+          <button
+            onClick={() => {
+              if (session) setIsAllianceOpen(true)
+              else setIsAuthModalOpen(true)
+            }}
+            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
+            title="Альянсы"
+          >
+            <Shield className="h-5 w-5" />
           </button>
           <div className="h-px w-full bg-[var(--glass-border)]" />
           <button
@@ -1710,7 +1733,7 @@ export default function PixelBattleCanvas({
         </div>
       )}
 
-    {/* ==================== MODALS ====================  */}
+      {/* ==================== MODALS ====================  */}
       {pixelInfoQuery && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none hidden md:block">
           <div className="pointer-events-auto">
@@ -1753,6 +1776,13 @@ export default function PixelBattleCanvas({
           overlay={templateOverlay}
           gridWidth={width}
           gridHeight={height}
+        />
+      )}
+
+      {isAllianceOpen && session && (
+        <AllianceModal
+          onClose={() => setIsAllianceOpen(false)}
+          currentUserId={session.user.id}
         />
       )}
 

@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { X, Lock, CheckCircle2 } from 'lucide-react';
-import { authService } from '../services/authService';
+import { useState } from 'react'
+import { X, Lock, CheckCircle2 } from 'lucide-react'
+import { authService } from '../services/authService'
 
 interface ResetPasswordModalProps {
-  onClose: () => void;
-  onSuccess: () => void;
+  onClose: () => void
+  onSuccess: () => void
 }
 
-const MIN_PASSWORD_LENGTH = 8;
+const MIN_PASSWORD_LENGTH = 8
 
 /**
  * Shown when Supabase redirects the user back to the app after they click the
@@ -16,42 +16,50 @@ const MIN_PASSWORD_LENGTH = 8;
  * session, so we can call `updateUser` directly without asking for the old
  * password.
  */
-export default function ResetPasswordModal({ onClose, onSuccess }: ResetPasswordModalProps) {
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
+export default function ResetPasswordModal({
+  onClose,
+  onSuccess,
+}: ResetPasswordModalProps) {
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault()
+    setError('')
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов`);
-      return;
+      setError(
+        `Пароль должен содержать не менее ${MIN_PASSWORD_LENGTH} символов`,
+      )
+      return
     }
     if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
-      return;
+      setError('Пароли не совпадают')
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const { error } = await authService.updatePassword(password);
-      if (error) throw error;
+      const { error } = await authService.updatePassword(password)
+      if (error) throw error
 
       // Clean the recovery token out of the URL so it can't be reused /
       // re-triggered on refresh and doesn't linger in browser history.
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', window.location.pathname)
 
-      setDone(true);
+      setDone(true)
     } catch (err: any) {
-      setError(err?.message || 'Не удалось обновить пароль. Ссылка могла устареть — запросите новую.');
+      setError(
+        err?.message ||
+          'Не удалось обновить пароль. Ссылка могла устареть — запросите новую.',
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
@@ -71,7 +79,9 @@ export default function ResetPasswordModal({ onClose, onSuccess }: ResetPassword
           <div className="space-y-4">
             <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-sm">
               <CheckCircle2 className="h-5 w-5 text-[var(--primary)] shrink-0 mt-0.5" />
-              <span>Пароль успешно обновлён. Теперь вы можете продолжить работу.</span>
+              <span>
+                Пароль успешно обновлён. Теперь вы можете продолжить работу.
+              </span>
             </div>
             <button
               type="button"
@@ -133,5 +143,5 @@ export default function ResetPasswordModal({ onClose, onSuccess }: ResetPassword
         )}
       </div>
     </div>
-  );
+  )
 }

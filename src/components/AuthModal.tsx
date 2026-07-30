@@ -1,99 +1,103 @@
-import { useState } from 'react';
-import { X, Mail, Lock, User, ArrowLeft, CheckCircle2 } from 'lucide-react';
-import { authService } from '../services/authService';
+import { useState } from 'react'
+import { X, Mail, Lock, User, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { authService } from '../services/authService'
 
 interface AuthModalProps {
-  onClose: () => void;
-  onSuccess: () => void;
+  onClose: () => void
+  onSuccess: () => void
 }
 
-type Mode = 'login' | 'signup' | 'forgot';
+type Mode = 'login' | 'signup' | 'forgot'
 
-const RESET_COOLDOWN_SECONDS = 30;
+const RESET_COOLDOWN_SECONDS = 30
 
 export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
-  const [mode, setMode] = useState<Mode>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [mode, setMode] = useState<Mode>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   // --- "Forgot password" view state ---
-  const [resetSent, setResetSent] = useState(false);
-  const [resetCooldown, setResetCooldown] = useState(0);
+  const [resetSent, setResetSent] = useState(false)
+  const [resetCooldown, setResetCooldown] = useState(0)
 
   // --- Post-signup "confirm your email" view state ---
-  const [signupConfirmPending, setSignupConfirmPending] = useState(false);
+  const [signupConfirmPending, setSignupConfirmPending] = useState(false)
 
-  const isLogin = mode === 'login';
+  const isLogin = mode === 'login'
 
   const switchMode = (next: Mode) => {
-    setMode(next);
-    setError('');
-    setSignupConfirmPending(false);
-  };
+    setMode(next)
+    setError('')
+    setSignupConfirmPending(false)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
     try {
       if (mode === 'login') {
-        const { error } = await authService.signIn(email, password);
-        if (error) throw error;
-        onSuccess();
+        const { error } = await authService.signIn(email, password)
+        if (error) throw error
+        onSuccess()
       } else {
-        const { data, error } = await authService.signUp(email, password, username);
-        if (error) throw error;
+        const { data, error } = await authService.signUp(
+          email,
+          password,
+          username,
+        )
+        if (error) throw error
 
         if (!data.session) {
           // "Confirm email" is enabled in Supabase — signUp succeeds but
           // doesn't return a session until the user clicks the link in
           // their inbox. Show that instead of pretending they're logged in.
-          setSignupConfirmPending(true);
+          setSignupConfirmPending(true)
         } else {
-          onSuccess();
+          onSuccess()
         }
       }
     } catch (err: any) {
-      setError(err?.message || 'Произошла ошибка');
+      setError(err?.message || 'Произошла ошибка')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleResetRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (resetCooldown > 0) return;
+    e.preventDefault()
+    if (resetCooldown > 0) return
 
-    setLoading(true);
-    setError('');
+    setLoading(true)
+    setError('')
 
     try {
       // Supabase does not reveal whether the address is registered — the
       // response is intentionally generic to avoid leaking account existence.
-      await authService.resetPasswordForEmail(email.trim());
-      setResetSent(true);
-      setResetCooldown(RESET_COOLDOWN_SECONDS);
+      await authService.resetPasswordForEmail(email.trim())
+      setResetSent(true)
+      setResetCooldown(RESET_COOLDOWN_SECONDS)
       const timer = setInterval(() => {
         setResetCooldown((s) => {
           if (s <= 1) {
-            clearInterval(timer);
-            return 0;
+            clearInterval(timer)
+            return 0
           }
-          return s - 1;
-        });
-      }, 1000);
+          return s - 1
+        })
+      }, 1000)
     } catch (err: any) {
       // Even on a real error we keep the message generic — no hints about
       // whether the account exists, just that something went wrong.
-      setError('Не удалось отправить письмо. Попробуйте ещё раз позже.');
+      setError('Не удалось отправить письмо. Попробуйте ещё раз позже.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
@@ -109,8 +113,8 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           <button
             type="button"
             onClick={() => {
-              switchMode('login');
-              setResetSent(false);
+              switchMode('login')
+              setResetSent(false)
             }}
             className="mb-4 flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
           >
@@ -120,7 +124,8 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         <h3 className="text-xl font-display font-bold mb-6">
           {mode === 'login' && 'Вход в Pixel Lab'}
-          {mode === 'signup' && (signupConfirmPending ? 'Подтвердите почту' : 'Регистрация')}
+          {mode === 'signup' &&
+            (signupConfirmPending ? 'Подтвердите почту' : 'Регистрация')}
           {mode === 'forgot' && 'Восстановление пароля'}
         </h3>
 
@@ -135,8 +140,8 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-sm">
               <CheckCircle2 className="h-5 w-5 text-[var(--primary)] shrink-0 mt-0.5" />
               <span>
-                Проверьте почту для подтверждения. Если письма нет несколько минут —
-                загляните в папку «Спам».
+                Проверьте почту для подтверждения. Если письма нет несколько
+                минут — загляните в папку «Спам».
               </span>
             </div>
             <button
@@ -153,9 +158,9 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <div className="flex items-start gap-3 p-4 rounded-xl bg-[var(--primary)]/10 border border-[var(--primary)]/30 text-sm">
                 <CheckCircle2 className="h-5 w-5 text-[var(--primary)] shrink-0 mt-0.5" />
                 <span>
-                  Если аккаунт с адресом <b>{email}</b> существует, на него отправлено письмо
-                  со ссылкой для сброса пароля. Проверьте папку «Спам», если письма нет
-                  несколько минут.
+                  Если аккаунт с адресом <b>{email}</b> существует, на него
+                  отправлено письмо со ссылкой для сброса пароля. Проверьте
+                  папку «Спам», если письма нет несколько минут.
                 </span>
               </div>
               <button
@@ -172,7 +177,8 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
           ) : (
             <form onSubmit={handleResetRequest} className="space-y-4">
               <p className="text-sm text-[var(--muted-foreground)] -mt-2 mb-2">
-                Введите email, указанный при регистрации — мы пришлём ссылку для сброса пароля.
+                Введите email, указанный при регистрации — мы пришлём ссылку для
+                сброса пароля.
               </p>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted-foreground)]" />
@@ -230,7 +236,9 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   type="password"
                   required
                   minLength={mode === 'signup' ? 8 : undefined}
-                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                  autoComplete={
+                    mode === 'signup' ? 'new-password' : 'current-password'
+                  }
                   placeholder="Пароль"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -253,7 +261,11 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                 disabled={loading}
                 className="w-full bg-[var(--primary)] text-[var(--primary-foreground)] py-3 rounded-xl font-bold hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
               >
-                {loading ? 'Загрузка...' : isLogin ? 'Войти' : 'Создать аккаунт'}
+                {loading
+                  ? 'Загрузка...'
+                  : isLogin
+                    ? 'Войти'
+                    : 'Создать аккаунт'}
               </button>
             </form>
 
@@ -271,5 +283,5 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         )}
       </div>
     </div>
-  );
+  )
 }
