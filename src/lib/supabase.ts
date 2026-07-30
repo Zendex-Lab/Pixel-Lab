@@ -52,13 +52,13 @@ const createMockSupabase = () => {
 
   const mockClient = {
     auth: {
-      signUp: async ({ email, password, options }: any) => {
+      signUp: async (_args: any) => {
         return {
           data: { user: mockSession.user, session: mockSession },
           error: null,
         }
       },
-      signInWithPassword: async ({ email, password }: any) => {
+      signInWithPassword: async (_args: any) => {
         return {
           data: { user: mockSession.user, session: mockSession },
           error: null,
@@ -84,51 +84,55 @@ const createMockSupabase = () => {
     },
     from: (table: string) => {
       return {
-        select: (columns: string = '*') => {
-          return {
-            eq: (col: string, val: any) => {
-              return {
-                single: async () => {
-                  if (table === 'user_profiles') {
-                    return { data: mockProfile, error: null }
-                  }
-                  return { data: null, error: null }
-                },
-                async then(resolve: any) {
-                  if (table === 'user_profiles') {
-                    resolve({ data: mockProfile, error: null })
-                  } else {
-                    resolve({ data: [], error: null })
-                  }
-                },
+        select: (_columns: string = '*') => {
+          const queryMock: any = {
+            eq: (_col: string, _val: any) => queryMock,
+            ilike: (_col: string, _val: any) => queryMock,
+            order: (_col: string, _opts: any) => queryMock,
+            limit: (_num: number) => queryMock,
+            single: async () => {
+              if (table === 'user_profiles') {
+                return { data: mockProfile, error: null }
               }
+              return { data: null, error: null }
             },
-            range: async (from: number, to: number) => {
+            maybeSingle: async () => {
+              if (table === 'user_profiles') {
+                return { data: mockProfile, error: null }
+              }
+              return { data: null, error: null }
+            },
+            range: async (_from: number, _to: number) => {
               if (table === 'pixels') {
                 return { data: [], error: null }
               }
               return { data: [], error: null }
             },
             async then(resolve: any) {
-              resolve({ data: [], error: null })
+              if (table === 'user_profiles') {
+                resolve({ data: mockProfile, error: null })
+              } else {
+                resolve({ data: [], error: null })
+              }
             },
           }
+          return queryMock
         },
-        upsert: async (payload: any, options?: any) => {
+        upsert: async (payload: any, _options?: any) => {
           return { data: payload, error: null }
         },
         update: async (payload: any) => {
           return {
-            eq: (col: string, val: any) => {
+            eq: (_col: string, _val: any) => {
               return { data: payload, error: null }
             },
           }
         },
       }
     },
-    channel: (name: string) => {
+    channel: (_name: string) => {
       return {
-        on: (event: string, filter: any, callback: any) => {
+        on: (_event: string, _filter: any, _callback: any) => {
           return {
             subscribe: (statusCallback: any) => {
               if (statusCallback) {
@@ -140,8 +144,8 @@ const createMockSupabase = () => {
         },
       }
     },
-    removeChannel: (channel: any) => {},
-    rpc: async (fnName: string, params?: any) => {
+    removeChannel: (_channel: any) => {},
+    rpc: async (fnName: string, _params?: any) => {
       // Мок для RPC (place_pixel / place_pixels_batch и т.п.)
       if (fnName === 'create_alliance') {
         return { data: 'mock-alliance-uuid', error: null }
