@@ -15,8 +15,16 @@ export default function TemplateOverlayModal({
   gridWidth,
   gridHeight,
 }: TemplateOverlayModalProps) {
-  const { state, loadImageFile, setPosition, setSize, setOpacity, setLockAspect, toggleEnabled, clear } =
-    overlay
+  const {
+    state,
+    loadImageFile,
+    setPosition,
+    setSize,
+    setOpacity,
+    setLockAspect,
+    toggleEnabled,
+    clear,
+  } = overlay
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   return (
@@ -86,24 +94,32 @@ export default function TemplateOverlayModal({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--glass-bg)]">
-                  <span className="text-xs text-[var(--muted-foreground)]">X</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    X
+                  </span>
                   <input
                     type="number"
                     value={state.x}
                     min={0}
                     max={gridWidth - 1}
-                    onChange={e => setPosition(Number(e.target.value), state.y)}
+                    onChange={(e) =>
+                      setPosition(Number(e.target.value), state.y)
+                    }
                     className="w-full bg-transparent text-sm outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--glass-bg)]">
-                  <span className="text-xs text-[var(--muted-foreground)]">Y</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    Y
+                  </span>
                   <input
                     type="number"
                     value={state.y}
                     min={0}
                     max={gridHeight - 1}
-                    onChange={e => setPosition(state.x, Number(e.target.value))}
+                    onChange={(e) =>
+                      setPosition(state.x, Number(e.target.value))
+                    }
                     className="w-full bg-transparent text-sm outline-none"
                   />
                 </div>
@@ -119,7 +135,11 @@ export default function TemplateOverlayModal({
                 <button
                   onClick={() => setLockAspect(!state.lockAspect)}
                   className="flex items-center gap-1 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
-                  title={state.lockAspect ? 'Пропорции зафиксированы' : 'Пропорции свободны'}
+                  title={
+                    state.lockAspect
+                      ? 'Пропорции зафиксированы'
+                      : 'Пропорции свободны'
+                  }
                 >
                   {state.lockAspect ? (
                     <Link className="h-3.5 w-3.5" />
@@ -131,23 +151,31 @@ export default function TemplateOverlayModal({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--glass-bg)]">
-                  <span className="text-xs text-[var(--muted-foreground)]">Ш</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    Ш
+                  </span>
                   <input
                     type="number"
                     value={state.width}
                     min={1}
-                    onChange={e => setSize(Number(e.target.value), state.height)}
+                    onChange={(e) =>
+                      setSize(Number(e.target.value), state.height)
+                    }
                     className="w-full bg-transparent text-sm outline-none"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--glass-bg)]">
-                  <span className="text-xs text-[var(--muted-foreground)]">В</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">
+                    В
+                  </span>
                   <input
                     type="number"
                     value={state.height}
                     min={1}
                     disabled={state.lockAspect}
-                    onChange={e => setSize(state.width, Number(e.target.value))}
+                    onChange={(e) =>
+                      setSize(state.width, Number(e.target.value))
+                    }
                     className="w-full bg-transparent text-sm outline-none disabled:opacity-50"
                   />
                 </div>
@@ -170,7 +198,7 @@ export default function TemplateOverlayModal({
                 max={1}
                 step={0.05}
                 value={state.opacity}
-                onChange={e => setOpacity(Number(e.target.value))}
+                onChange={(e) => setOpacity(Number(e.target.value))}
                 className="w-full accent-[var(--primary)]"
               />
             </div>
@@ -182,7 +210,7 @@ export default function TemplateOverlayModal({
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={e => {
+          onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) loadImageFile(file)
           }}

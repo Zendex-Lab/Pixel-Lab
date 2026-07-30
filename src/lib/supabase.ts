@@ -143,6 +143,17 @@ const createMockSupabase = () => {
     removeChannel: (channel: any) => {},
     rpc: async (fnName: string, params?: any) => {
       // Мок для RPC (place_pixel / place_pixels_batch и т.п.)
+      if (fnName === 'create_alliance') {
+        return { data: 'mock-alliance-uuid', error: null }
+      }
+      if (
+        fnName === 'join_alliance' ||
+        fnName === 'leave_alliance' ||
+        fnName === 'transfer_alliance_ownership' ||
+        fnName === 'kick_alliance_member'
+      ) {
+        return { data: true, error: null }
+      }
       return { data: null, error: null }
     },
   }

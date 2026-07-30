@@ -1,6 +1,6 @@
-@import "tailwindcss" source(none);
+@import 'tailwindcss' source(none);
 @source "../src";
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -30,8 +30,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --font-display: "Camera Plain", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Camera Plain', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 @font-face {
@@ -59,13 +59,13 @@
   --popover: oklch(99% 0.01 230);
   --popover-foreground: oklch(22% 0.04 260);
 
-  --primary: oklch(62% 0.18 245);            /* Sonic blue */
+  --primary: oklch(62% 0.18 245); /* Sonic blue */
   --primary-foreground: oklch(99% 0.01 230);
   --secondary: oklch(92% 0.04 230);
   --secondary-foreground: oklch(25% 0.04 260);
   --muted: oklch(94% 0.02 230);
   --muted-foreground: oklch(48% 0.03 260);
-  --accent: oklch(72% 0.16 60);              /* ring gold */
+  --accent: oklch(72% 0.16 60); /* ring gold */
   --accent-foreground: oklch(22% 0.04 260);
   --destructive: oklch(60% 0.22 25);
   --destructive-foreground: oklch(99% 0 0);
@@ -78,14 +78,22 @@
   --glass-bg: oklch(99% 0.01 230 / 0.55);
   --glass-bg-strong: oklch(99% 0.01 230 / 0.75);
   --glass-border: oklch(100% 0 0 / 0.7);
-  --glass-inner: inset 0 1px 0 oklch(100% 0 0 / 0.8), inset 0 -1px 0 oklch(80% 0.03 230 / 0.3);
-  --glass-shadow: 0 10px 30px -12px oklch(60% 0.1 240 / 0.25), 0 2px 6px -2px oklch(60% 0.1 240 / 0.15);
+  --glass-inner:
+    inset 0 1px 0 oklch(100% 0 0 / 0.8),
+    inset 0 -1px 0 oklch(80% 0.03 230 / 0.3);
+  --glass-shadow:
+    0 10px 30px -12px oklch(60% 0.1 240 / 0.25),
+    0 2px 6px -2px oklch(60% 0.1 240 / 0.15);
   --glass-blur: 18px;
 
   /* page background — soft sky gradient with dot pattern */
   --page-bg:
     radial-gradient(circle at 20% 0%, oklch(92% 0.06 220) 0%, transparent 55%),
-    radial-gradient(circle at 80% 100%, oklch(94% 0.05 280) 0%, transparent 55%),
+    radial-gradient(
+      circle at 80% 100%,
+      oklch(94% 0.05 280) 0%,
+      transparent 55%
+    ),
     linear-gradient(180deg, oklch(97% 0.02 230) 0%, oklch(94% 0.03 230) 100%);
   --dot-color: oklch(70% 0.05 230 / 0.18);
 
@@ -120,8 +128,12 @@
   --glass-bg: oklch(28% 0.05 270 / 0.45);
   --glass-bg-strong: oklch(28% 0.06 270 / 0.7);
   --glass-border: oklch(80% 0.08 270 / 0.22);
-  --glass-inner: inset 0 1px 0 oklch(85% 0.08 270 / 0.18), inset 0 -1px 0 oklch(20% 0.04 270 / 0.5);
-  --glass-shadow: 0 0 40px -10px oklch(60% 0.22 280 / 0.35), 0 10px 30px -12px oklch(0% 0 0 / 0.6);
+  --glass-inner:
+    inset 0 1px 0 oklch(85% 0.08 270 / 0.18),
+    inset 0 -1px 0 oklch(20% 0.04 270 / 0.5);
+  --glass-shadow:
+    0 0 40px -10px oklch(60% 0.22 280 / 0.35),
+    0 10px 30px -12px oklch(0% 0 0 / 0.6);
   --glass-blur: 22px;
 
   --page-bg:
@@ -134,8 +146,13 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body { height: 100%; }
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body {
+    height: 100%;
+  }
   body {
     background: var(--page-bg) fixed;
     color: var(--color-foreground);
@@ -144,7 +161,7 @@
     min-height: 100dvh;
   }
   body::before {
-    content: "";
+    content: '';
     position: fixed;
     inset: 0;
     pointer-events: none;
@@ -153,7 +170,13 @@
     z-index: 0;
     opacity: 0.7;
   }
-  h1,h2,h3,h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
 }
 
 @layer utilities {
@@ -181,11 +204,16 @@
     box-shadow: var(--glass-shadow), var(--glass-inner);
     border-radius: var(--radius);
     contain: paint layout;
-    transition: transform 220ms cubic-bezier(0.16,1,0.32,1), box-shadow 220ms;
+    transition:
+      transform 220ms cubic-bezier(0.16, 1, 0.32, 1),
+      box-shadow 220ms;
   }
-  .glass-tile:hover, .glass-tile:focus-visible {
+  .glass-tile:hover,
+  .glass-tile:focus-visible {
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 14px 40px -8px oklch(from var(--primary) l c h / 0.45), var(--glass-inner);
+    box-shadow:
+      0 14px 40px -8px oklch(from var(--primary) l c h / 0.45),
+      var(--glass-inner);
     outline: none;
   }
   .focus-ring:focus-visible {
@@ -201,15 +229,28 @@
     padding: 12px 16px;
     position: relative;
   }
-  .text-emerald-dynamic { color: var(--emerald); }
-  .fill-emerald-dynamic { fill: var(--emerald); }
-  .stroke-emerald-dynamic { stroke: var(--emerald); }
+  .text-emerald-dynamic {
+    color: var(--emerald);
+  }
+  .fill-emerald-dynamic {
+    fill: var(--emerald);
+  }
+  .stroke-emerald-dynamic {
+    stroke: var(--emerald);
+  }
   .ring-glow {
-    box-shadow: 0 0 0 2px var(--ring), 0 0 24px oklch(from var(--ring) l c h / 0.5);
+    box-shadow:
+      0 0 0 2px var(--ring),
+      0 0 24px oklch(from var(--ring) l c h / 0.5);
   }
   @keyframes gradient-x {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
   .animate-gradient-x {
     animation: gradient-x 3s ease infinite;
@@ -217,22 +258,42 @@
 
   /* Anniversary Animated Borders - Applied as background to a pseudo-element behind the card */
   .border-animated-green {
-    background: linear-gradient(90deg, oklch(70% 0.2 145 / 0.8), oklch(60% 0.2 145 / 0.8), oklch(70% 0.2 145 / 0.8));
+    background: linear-gradient(
+      90deg,
+      oklch(70% 0.2 145 / 0.8),
+      oklch(60% 0.2 145 / 0.8),
+      oklch(70% 0.2 145 / 0.8)
+    );
     background-size: 200% auto;
     animation: border-flow 3s linear infinite;
   }
   .border-animated-blue {
-    background: linear-gradient(90deg, oklch(60% 0.2 250 / 0.8), oklch(50% 0.2 250 / 0.8), oklch(60% 0.2 250 / 0.8));
+    background: linear-gradient(
+      90deg,
+      oklch(60% 0.2 250 / 0.8),
+      oklch(50% 0.2 250 / 0.8),
+      oklch(60% 0.2 250 / 0.8)
+    );
     background-size: 200% auto;
     animation: border-flow 3s linear infinite;
   }
   .border-animated-red {
-    background: linear-gradient(90deg, oklch(60% 0.2 25 / 0.8), oklch(50% 0.2 25 / 0.8), oklch(60% 0.2 25 / 0.8));
+    background: linear-gradient(
+      90deg,
+      oklch(60% 0.2 25 / 0.8),
+      oklch(50% 0.2 25 / 0.8),
+      oklch(60% 0.2 25 / 0.8)
+    );
     background-size: 200% auto;
     animation: border-flow 3s linear infinite;
   }
   .border-animated-purple {
-    background: linear-gradient(90deg, oklch(65% 0.2 300 / 0.8), oklch(55% 0.2 300 / 0.8), oklch(65% 0.2 300 / 0.8));
+    background: linear-gradient(
+      90deg,
+      oklch(65% 0.2 300 / 0.8),
+      oklch(55% 0.2 300 / 0.8),
+      oklch(65% 0.2 300 / 0.8)
+    );
     background-size: 200% auto;
     animation: border-flow 3s linear infinite;
   }
@@ -251,26 +312,45 @@
   }
 
   @keyframes border-flow {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
+    0% {
+      background-position: 0% 50%;
+    }
+    100% {
+      background-position: 200% 50%;
+    }
   }
 
-  .prose-glass :where(p,ul,ol) { margin: 0.5em 0; }
-  .prose-glass :where(strong) { font-weight: 600; }
-  .prose-glass :where(a) { color: var(--primary); text-decoration: underline; }
+  .prose-glass :where(p, ul, ol) {
+    margin: 0.5em 0;
+  }
+  .prose-glass :where(strong) {
+    font-weight: 600;
+  }
+  .prose-glass :where(a) {
+    color: var(--primary);
+    text-decoration: underline;
+  }
 }
 
 /* Reduce blur on small screens / reduced transparency */
 @media (max-width: 768px) {
-  :root, .dark { --glass-blur: 12px; }
+  :root,
+  .dark {
+    --glass-blur: 12px;
+  }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .glass, .glass-strong, .glass-tile, .speech-bubble {
+  .glass,
+  .glass-strong,
+  .glass-tile,
+  .speech-bubble {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     background: var(--card);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .glass-tile { transition: none; }
+  .glass-tile {
+    transition: none;
+  }
 }
