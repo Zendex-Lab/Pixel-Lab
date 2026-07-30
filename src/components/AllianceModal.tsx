@@ -44,6 +44,11 @@ export default function AllianceModal({
   // Members State (when in an alliance)
   const [members, setMembers] = useState<AllianceMember[]>([])
 
+  // Tab State for users in an alliance
+  const [activeTab, setActiveTab] = useState<'my_alliance' | 'explore'>(
+    'my_alliance',
+  )
+
   const loadData = async () => {
     setLoading(true)
     try {
@@ -72,14 +77,15 @@ export default function AllianceModal({
   }, [currentUserId, isCreating])
 
   useEffect(() => {
-    if (!userAlliance && !isCreating) {
+    // Only search automatically if we are exploring or have no alliance and are not creating
+    if ((!userAlliance || activeTab === 'explore') && !isCreating) {
       const delaySearch = setTimeout(async () => {
         const results = await allianceService.searchAlliances(searchQuery)
         setAlliances(results)
       }, 300)
       return () => clearTimeout(delaySearch)
     }
-  }, [searchQuery, userAlliance, isCreating])
+  }, [searchQuery, userAlliance, isCreating, activeTab])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -184,9 +190,33 @@ export default function AllianceModal({
             <div className="flex items-center justify-center py-12 text-[var(--muted-foreground)]">
               Загрузка...
             </div>
-          ) : userAlliance ? (
+          ) : userAlliance && activeTab === 'my_alliance' ? (
             // === USER IS IN AN ALLIANCE ===
             <div className="space-y-6 animate-in fade-in">
+              {/* Tabs */}
+              <div className="flex items-center gap-2 p-1 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)]">
+                <button
+                  onClick={() => setActiveTab('my_alliance')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                    activeTab === 'my_alliance'
+                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
+                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  Мой альянс
+                </button>
+                <button
+                  onClick={() => setActiveTab('explore')}
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                    activeTab === 'explore'
+                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
+                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                  }`}
+                >
+                  Поиск
+                </button>
+              </div>
+
               {/* Alliance Header */}
               <div className="flex items-center gap-4 p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)] relative overflow-hidden">
                 <div className="absolute -right-4 -bottom-4 text-8xl opacity-5 pointer-events-none blur-sm">
@@ -368,6 +398,31 @@ export default function AllianceModal({
           ) : (
             // === BROWSE ALLIANCES ===
             <div className="space-y-5 animate-in fade-in">
+              {userAlliance && (
+                <div className="flex items-center gap-2 p-1 rounded-xl bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] mb-4">
+                  <button
+                    onClick={() => setActiveTab('my_alliance')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                      activeTab === 'my_alliance'
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
+                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                    }`}
+                  >
+                    Мой альянс
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('explore')}
+                    className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
+                      activeTab === 'explore'
+                        ? 'bg-[var(--primary)] text-[var(--primary-foreground)] shadow-md'
+                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                    }`}
+                  >
+                    Поиск
+                  </button>
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--muted-foreground)]" />
@@ -420,7 +475,11 @@ export default function AllianceModal({
                       </div>
                       <button
                         onClick={() => handleJoin(alliance.id)}
-                        className="px-4 py-2 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] font-bold transition-all text-sm shrink-0"
+                        disabled={!!userAlliance}
+                        title={
+                          userAlliance ? 'Вы уже состоите в альянсе' : undefined
+                        }
+                        className="px-4 py-2 rounded-xl bg-[var(--primary)]/10 text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] font-bold transition-all text-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--primary)]/10 disabled:hover:text-[var(--primary)]"
                       >
                         Вступить
                       </button>
