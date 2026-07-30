@@ -262,3 +262,13 @@ LOG /src/lib/supabase.ts:19:3
 11:29:47 AM [vite] (ssr) page reload src/components/AllianceModal.tsx
 [Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
 [Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+11:50:52 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/AllianceModal.tsx
+11:50:52 AM [vite] (ssr) page reload src/components/AllianceModal.tsx
+11:55:37 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/AllianceModal.tsx
+11:55:37 AM [vite] (ssr) page reload src/components/AllianceModal.tsx
+11:56:26 AM [vite] (client) hmr update /src/styles.css?direct, /src/components/AllianceModal.tsx
+11:56:26 AM [vite] (ssr) page reload src/components/AllianceModal.tsx
+[Client] ⚠️ Supabase environment variables are missing! Falling back to offline mock client.
+[Client] src/lib/supabase.ts:19:3 🛠️ Using mock Supabase client for offline/local testing.
+12:31:05 PM [vite] (client) hmr update /src/styles.css?direct, /src/components/AllianceModal.tsx
+12:31:05 PM [vite] (ssr) page reload src/components/AllianceModal.tsx
