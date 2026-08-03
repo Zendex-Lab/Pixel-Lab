@@ -1599,8 +1599,8 @@ export default function PixelBattleCanvas({
 
       {/* ==================== MODALS ====================  */}
       {pixelInfoQuery && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none hidden md:block">
-          <div className="pointer-events-auto">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none w-[92vw] max-w-[480px] sm:w-auto">
+          <div className="pointer-events-auto w-full">
             <PixelInfoPopup
               x={pixelInfoQuery.x}
               y={pixelInfoQuery.y}

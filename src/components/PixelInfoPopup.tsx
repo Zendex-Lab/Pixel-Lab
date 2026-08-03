@@ -35,16 +35,7 @@ export default function PixelInfoPopup({
   onPaint,
 }: PixelInfoPopupProps) {
   return (
-    <div className="relative pointer-events-auto flex flex-col sm:flex-row items-center gap-3 sm:gap-4 p-4 pr-12 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl backdrop-blur-2xl animate-in slide-in-from-bottom-4 fade-in duration-200 w-[92vw] max-w-[480px] sm:w-auto">
-      {/* Absolute Close Button inside modal bounds */}
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors z-10"
-        title="Закрыть"
-      >
-        <X className="h-4 w-4" />
-      </button>
-
+    <div className="relative pointer-events-auto flex flex-col sm:flex-row items-center gap-3 sm:gap-4 p-4 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl backdrop-blur-2xl animate-in slide-in-from-bottom-4 fade-in duration-200 w-full">
       {/* Left Section: Coords & Color swatch */}
       <div className="flex items-center gap-3 w-full sm:w-auto border-b sm:border-b-0 sm:border-r border-slate-200 dark:border-slate-800 pb-3 sm:pb-0 sm:pr-4 shrink-0 justify-between sm:justify-start">
         <div className="flex items-center gap-2.5">
@@ -102,7 +93,7 @@ export default function PixelInfoPopup({
         )}
       </div>
 
-      {/* Right Section: Action Button */}
+      {/* Right Section: Action Button & Close Button */}
       <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-800">
         <button
           onClick={onPaint}
@@ -110,6 +101,14 @@ export default function PixelInfoPopup({
         >
           <Brush className="h-4 w-4" />
           <span>Рисовать</span>
+        </button>
+
+        <button
+          onClick={onClose}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-100 transition-colors"
+          title="Закрыть"
+        >
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>
