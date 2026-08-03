@@ -1600,6 +1600,8 @@ export default function PixelBattleCanvas({
               paletteHex={PALETTE_HEX}
               onClose={() => setPixelInfoQuery(null)}
               onPaint={() => {
+                setIsActiveDrawingMode(true)
+                setIsPaletteOpen(true)
                 handleDraftAction(pixelInfoQuery.x, pixelInfoQuery.y)
                 setPixelInfoQuery(null)
               }}
