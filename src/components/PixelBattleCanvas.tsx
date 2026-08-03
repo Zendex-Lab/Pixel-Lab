@@ -140,8 +140,14 @@ export default function PixelBattleCanvas({
   const [pendingCount, setPendingCount] = useState(0)
   const [isEraserMode, setIsEraserMode] = useState(false)
   const [isEyedropperMode, setIsEyedropperMode] = useState(false)
+  const isEraserModeRef = useRef(isEraserMode)
+  isEraserModeRef.current = isEraserMode
+  const isEyedropperModeRef = useRef(isEyedropperMode)
+  isEyedropperModeRef.current = isEyedropperMode
   const [isLoadingCanvas, setIsLoadingCanvas] = useState(true)
   const [isActiveDrawingMode, setIsActiveDrawingMode] = useState(false)
+  const isActiveDrawingModeRef = useRef(isActiveDrawingMode)
+  isActiveDrawingModeRef.current = isActiveDrawingMode
   const [pixelInfoQuery, setPixelInfoQuery] = useState<{
     x: number
     y: number
@@ -727,14 +733,17 @@ export default function PixelBattleCanvas({
         if (dx < 5 && dy < 5) {
           const grid = screenToGrid(e.clientX, e.clientY)
           if (grid && grid.inBounds) {
-            // Если зажат Shift ИЛИ уже есть черновики -> мы в процессе рисования, ставим пиксель
+            // Если зажат Shift, есть черновики, режим рисования, ластик или пипетка -> обрабатываем действие
             if (
               isShiftPressedRef.current ||
-              pendingPixelsRef.current.size > 0
+              pendingPixelsRef.current.size > 0 ||
+              isActiveDrawingModeRef.current ||
+              isEraserModeRef.current ||
+              isEyedropperModeRef.current
             ) {
               handleDraftAction(grid.gridX, grid.gridY)
             } else {
-              // Если черновиков нет и Shift не зажат -> открываем инфо о пикселе
+              // Если ничего не активно -> открываем инфо о пикселе
               openPixelInfo(grid.gridX, grid.gridY)
             }
           }
