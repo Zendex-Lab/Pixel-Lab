@@ -17,7 +17,6 @@ import {
   MousePointer2,
   ZoomIn,
   ZoomOut,
-  Move,
   Zap,
   Info,
   ShoppingBag,
@@ -172,6 +171,8 @@ export default function PixelBattleCanvas({
   const [isDark, setIsDark] = useState(true)
   const [showGrid, setShowGrid] = useState(true)
   const showGridRef = useRef(showGrid)
+  const [enableBlinking, setEnableBlinking] = useState(true)
+  const enableBlinkingRef = useRef(enableBlinking)
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false)
   const [isShopOpen, setIsShopOpen] = useState(false)
@@ -761,6 +762,11 @@ export default function PixelBattleCanvas({
   }, [showGrid])
 
   useEffect(() => {
+    enableBlinkingRef.current = enableBlinking
+    dirtyRef.current = true
+  }, [enableBlinking])
+
+  useEffect(() => {
     chargesRef.current = charges
     maxChargesRef.current = maxCharges
   }, [charges, maxCharges])
@@ -917,9 +923,13 @@ export default function PixelBattleCanvas({
       }
 
       if (pendingPixelsRef.current.size > 0) {
-        const time = Date.now()
-        const alpha = 0.5 + 0.3 * Math.sin(time / 150)
-        ctx.globalAlpha = alpha
+        if (enableBlinkingRef.current) {
+          const time = Date.now()
+          const alpha = 0.5 + 0.3 * Math.sin(time / 150)
+          ctx.globalAlpha = alpha
+        } else {
+          ctx.globalAlpha = 0.85
+        }
 
         pendingPixelsRef.current.forEach(({ x, y, color_idx }) => {
           ctx.fillStyle = PALETTE_HEX[color_idx]
@@ -1105,159 +1115,97 @@ export default function PixelBattleCanvas({
           onContextMenu={(e) => e.preventDefault()}
         />
 
-        {/* Desktop Coordinate & Zoom Badge */}
-        <div className="pointer-events-none absolute top-4 left-4 glass flex items-center gap-3 px-3.5 py-2 text-xs font-mono text-[var(--foreground)] hidden md:flex">
-          <span className="flex items-center gap-1.5 border-r border-[var(--glass-border)] pr-3">
-            <MousePointer2 className="h-4 w-4 text-[var(--muted-foreground)]" />
-            <span ref={coordsLabelRef}>—, —</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <ZoomIn className="h-4 w-4 text-[var(--muted-foreground)]" />
-            <span ref={scaleLabelRef}>
-              {Math.round(transformRef.current.scale * 100)}%
+        {/* ==================== TOP HEADER BAR ==================== */}
+        {/* Top Left Floating Pill: Coords & Zoom */}
+        <div className="absolute top-4 left-4 z-20 pointer-events-auto flex items-center gap-2">
+          <div className="inline-flex h-11 items-center gap-3 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-4 shadow-lg backdrop-blur-md transition-all duration-300">
+            <span className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 pr-3">
+              <MousePointer2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <span ref={coordsLabelRef}>—, —</span>
             </span>
-          </span>
-        </div>
-
-        {/* Mobile Coordinate Badge */}
-        <div className="pointer-events-none absolute top-4 left-4 glass flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono text-[var(--foreground)] md:hidden">
-          <span>📍</span>
-          <span ref={mobileCoordsLabelRef}>—, —</span>
-        </div>
-
-        {/* Desktop Keyboard Hints */}
-        <div className="pointer-events-none absolute top-4 right-4 glass flex items-center gap-2 px-3.5 py-2 text-xs text-[var(--muted-foreground)] hidden md:flex">
-          <Move className="h-4 w-4" />
-          <span>
-            Колесо - зум · ЛКМ/СКМ перемещение ·{' '}
-            <span className="text-[var(--primary)] font-medium">
-              Shift+Drag — рисовать
+            <span className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200">
+              <ZoomIn className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+              <span ref={scaleLabelRef}>
+                {Math.round(transformRef.current.scale * 100)}%
+              </span>
             </span>
-          </span>
+          </div>
         </div>
 
-        {/* Mobile Top Bar Action Icons */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 z-20 md:hidden">
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
-            title="Настройки"
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setIsShopOpen(true)}
-            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--primary)] active:scale-95 transition-all relative"
-            title="Магазин"
-          >
-            <ShoppingBag className="h-4 w-4" />
-            {!isShopOnCooldown && (
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-[var(--accent)] animate-ping" />
-            )}
-          </button>
-          <button
-            onClick={() => setIsTemplateOpen(true)}
-            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
-            title="Шаблон-подсказка"
-          >
-            <ImagePlus className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => {
-              if (session) setIsAllianceOpen(true)
-              else setIsAuthModalOpen(true)
-            }}
-            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
-            title="Альянсы"
-          >
-            <Shield className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setIsMobileProfileOpen(true)}
-            className="p-2.5 rounded-full glass hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-95 transition-all"
-            title="Профиль"
-          >
-            <User
-              className={`h-4 w-4 ${session ? 'text-[var(--primary)]' : ''}`}
-            />
-          </button>
-        </div>
+        {/* Top Right Floating Bar: Profile, Actions */}
+        <div className="absolute top-4 right-4 z-20 pointer-events-auto flex items-center gap-2">
+          <div className="inline-flex h-11 items-center gap-1 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-1.5 shadow-lg backdrop-blur-md transition-all duration-300">
+            {/* Template Overlay Button */}
+            <button
+              onClick={() => setIsTemplateOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              title="Шаблон"
+            >
+              <ImagePlus className="h-4 w-4" />
+            </button>
 
-        {/* HUD: Floating Vertical Toolbar */}
-        <div className="absolute right-4 bottom-24 glass flex flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] z-20 hidden md:flex">
-          <button
-            onClick={() => zoomBy(1.4)}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Приблизить"
-          >
-            <ZoomIn className="h-5 w-5" />
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => zoomBy(1 / 1.4)}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Отдалить"
-          >
-            <ZoomOut className="h-5 w-5" />
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Настройки"
-          >
-            <Settings className="h-5 w-5" />
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => setIsShopOpen(true)}
-            className="p-3 text-[var(--primary)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors relative"
-            title="Магазин"
-          >
-            <ShoppingBag className="h-5 w-5" />
-            {!isShopOnCooldown && (
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-[var(--accent)] animate-ping" />
-            )}
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => setIsTemplateOpen(true)}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Шаблон-подсказка"
-          >
-            <ImagePlus className="h-5 w-5" />
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => {
-              if (session) setIsAllianceOpen(true)
-              else setIsAuthModalOpen(true)
-            }}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Альянсы"
-          >
-            <Shield className="h-5 w-5" />
-          </button>
-          <div className="h-px w-full bg-[var(--glass-border)]" />
-          <button
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="p-3 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg-strong)] transition-colors"
-            title="Профиль"
-          >
-            <User
-              className={`h-5 w-5 ${session ? 'text-[var(--primary)]' : ''}`}
-            />
-          </button>
+            <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+            {/* Shop Button */}
+            <button
+              onClick={() => setIsShopOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-indigo-600 dark:text-indigo-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors relative"
+              title="Магазин зарядов"
+            >
+              <ShoppingBag className="h-4 w-4" />
+              {!isShopOnCooldown && (
+                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+              )}
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+            {/* Alliance Button */}
+            <button
+              onClick={() => {
+                if (session) setIsAllianceOpen(true)
+                else setIsAuthModalOpen(true)
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              title="Альянсы"
+            >
+              <Shield className="h-4 w-4" />
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+            {/* Settings Button */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+              title="Настройки"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-800" />
+
+            {/* Profile Button */}
+            <button
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors relative"
+              title="Профиль"
+            >
+              <User
+                className={`h-4 w-4 ${session ? 'text-indigo-500 dark:text-indigo-400' : ''}`}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Profile Popover */}
         {isProfileOpen && (
-          <div className="absolute right-[4.5rem] bottom-24 glass-strong p-4 rounded-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col gap-3 min-w-[160px] animate-in fade-in slide-in-from-right-4 duration-200 z-20">
+          <div className="absolute right-4 top-16 glass-strong p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 shadow-2xl flex flex-col gap-3 min-w-[180px] animate-in fade-in slide-in-from-top-4 duration-200 z-30 pointer-events-auto">
             {session ? (
               <>
-                <div className="flex items-center gap-2 border-b border-[var(--glass-border)] pb-2 mb-1">
-                  <User className="h-4 w-4 text-[var(--primary)]" />
-                  <span className="font-bold text-sm truncate">
+                <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 mb-1">
+                  <User className="h-4 w-4 text-indigo-500" />
+                  <span className="font-bold text-sm truncate text-slate-800 dark:text-slate-100">
                     {profile?.username}
                   </span>
                 </div>
@@ -1267,7 +1215,7 @@ export default function PixelBattleCanvas({
                       setIsAdminOpen(true)
                       setIsProfileOpen(false)
                     }}
-                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500/20 transition-colors text-left"
+                    className="flex items-center gap-2 px-3 py-2 bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl text-xs font-bold hover:bg-red-500/20 transition-colors text-left"
                   >
                     <Shield className="h-4 w-4" /> Админ-панель
                   </button>
@@ -1277,20 +1225,22 @@ export default function PixelBattleCanvas({
                     authService.signOut()
                     setIsProfileOpen(false)
                   }}
-                  className="px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 rounded-lg transition-colors text-left font-medium"
+                  className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-colors text-left font-medium"
                 >
                   Выйти из аккаунта
                 </button>
               </>
             ) : (
               <>
-                <div className="text-sm font-medium mb-1">Вы не вошли</div>
+                <div className="text-sm font-medium mb-1 text-slate-700 dark:text-slate-300">
+                  Вы не вошли
+                </div>
                 <button
                   onClick={() => {
                     setIsAuthModalOpen(true)
                     setIsProfileOpen(false)
                   }}
-                  className="px-3 py-2 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg text-xs font-bold hover:opacity-90 transition-opacity"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
                 >
                   Войти
                 </button>
@@ -1302,27 +1252,29 @@ export default function PixelBattleCanvas({
         {/* Mobile Profile Bottom Sheet */}
         {isMobileProfileOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4 md:hidden"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 p-4 md:hidden pointer-events-auto"
             onClick={() => setIsMobileProfileOpen(false)}
           >
             <div
-              className="glass-strong w-full max-w-sm p-6 rounded-t-3xl border-t border-[var(--glass-border)] shadow-2xl relative animate-in slide-in-from-bottom duration-300"
+              className="bg-white dark:bg-slate-900 w-full max-w-sm p-6 rounded-t-3xl border-t border-slate-200 dark:border-slate-800 shadow-2xl relative animate-in slide-in-from-bottom duration-300"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={() => setIsMobileProfileOpen(false)}
-                className="absolute top-4 right-4 p-2 rounded-xl text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg)]"
+                className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 <X className="h-5 w-5" />
               </button>
 
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-3 rounded-2xl bg-[var(--primary)]/10 text-[var(--primary)]">
+                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-500">
                   <User className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Профиль</h3>
-                  <p className="text-xs text-[var(--muted-foreground)]">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                    Профиль
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Информация о пользователе
                   </p>
                 </div>
@@ -1330,10 +1282,10 @@ export default function PixelBattleCanvas({
 
               {session ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-2xl border border-[var(--glass-border)] bg-[var(--glass-bg)]">
+                  <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                     <div className="flex items-center gap-3">
-                      <User className="h-5 w-5 text-[var(--primary)]" />
-                      <span className="font-bold text-sm truncate">
+                      <User className="h-5 w-5 text-indigo-500" />
+                      <span className="font-bold text-sm truncate text-slate-900 dark:text-slate-100">
                         {profile?.username}
                       </span>
                     </div>
@@ -1344,7 +1296,7 @@ export default function PixelBattleCanvas({
                         setIsAdminOpen(true)
                         setIsMobileProfileOpen(false)
                       }}
-                      className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-400 rounded-xl text-sm font-bold border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95"
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-500 dark:text-red-400 rounded-xl text-sm font-bold border border-red-500/20 hover:bg-red-500/20 transition-all active:scale-95"
                     >
                       <Shield className="h-4 w-4" /> Админ-панель
                     </button>
@@ -1354,14 +1306,14 @@ export default function PixelBattleCanvas({
                       authService.signOut()
                       setIsMobileProfileOpen(false)
                     }}
-                    className="w-full py-3 text-sm text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 border border-[var(--glass-border)] bg-[var(--glass-bg)] rounded-xl transition-all active:scale-95 font-medium"
+                    className="w-full py-3 text-sm text-slate-600 dark:text-slate-400 hover:text-rose-500 border border-slate-200 dark:border-slate-800 rounded-xl transition-all active:scale-95 font-medium"
                   >
                     Выйти из аккаунта
                   </button>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="text-sm font-medium text-center text-[var(--muted-foreground)] py-2">
+                  <div className="text-sm font-medium text-center text-slate-500 dark:text-slate-400 py-2">
                     Вы не авторизованы
                   </div>
                   <button
@@ -1369,7 +1321,7 @@ export default function PixelBattleCanvas({
                       setIsAuthModalOpen(true)
                       setIsMobileProfileOpen(false)
                     }}
-                    className="w-full py-3 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-xl text-sm font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)]"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold active:scale-95 transition-all shadow-lg"
                   >
                     Войти
                   </button>
@@ -1380,356 +1332,198 @@ export default function PixelBattleCanvas({
         )}
       </div>
 
-      {/* ==================== MOBILE BOTTOM BAR LAYOUTS ==================== */}
-      {/* State A (Default Viewing Mode) */}
-      {!isActiveDrawingMode && !pixelInfoQuery && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[360px] z-10 pointer-events-auto flex flex-col items-center gap-2 md:hidden">
-          {/* Thin energy/charge progress bar */}
-          <div className="w-full glass-strong px-4 py-2 flex flex-col gap-1 rounded-xl">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1 text-[10px] text-[var(--muted-foreground)] font-semibold uppercase tracking-wider">
-                <Zap className="h-3 w-3 text-[var(--accent)] animate-pulse" />
-                Заряды
-              </span>
-              <span className="text-xs font-bold font-mono">
-                {charges}{' '}
-                <span className="text-[10px] text-[var(--muted-foreground)]">
-                  / {maxCharges}
-                </span>
-              </span>
-            </div>
-            <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
-                style={{
-                  width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Buttons Row */}
-          <div className="w-full glass-strong flex items-center justify-between p-2.5 rounded-2xl shadow-xl gap-2">
-            {/* Palette Button */}
-            <button
-              onClick={() => {
-                setIsActiveDrawingMode(true)
-                setIsPaletteOpen(true)
-              }}
-              className="p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)] text-[var(--primary)] active:scale-90 transition-all shrink-0"
-              title="Палитра"
-            >
-              <Palette className="h-5 w-5" />
-            </button>
-
-            {/* Main Draw Button with Brush Icon */}
-            <button
-              onClick={() => {
-                setIsActiveDrawingMode(true)
-              }}
-              className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] active:scale-95 transition-all text-sm shrink-0"
-            >
-              <Brush className="h-5 w-5" />
-              <span>Рисовать</span>
-            </button>
-
-            {/* Focus My Position Icon */}
-            <button
-              onClick={handleFocusMyPosition}
-              className="p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)] active:scale-90 transition-all shrink-0"
-              title="Моя позиция"
-            >
-              <Crosshair className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* State B (Active Drawing Mode - Slide-up Bottom Sheet) */}
-      {isActiveDrawingMode && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-[var(--glass-border)] rounded-t-2xl shadow-2xl p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-bottom duration-300">
-          {/* Drag indicator handle */}
-          <div className="w-12 h-1 bg-[var(--glass-border)] rounded-full mx-auto mb-1" />
-
-          {/* Horizontally scrollable color palette row */}
-          <div className="flex items-center justify-between border-b border-[var(--glass-border)] pb-2">
-            <span className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider flex items-center gap-1.5">
-              <Palette className="h-4 w-4 text-[var(--primary)]" /> Палитра
-              цвета
-            </span>
-            <span className="text-[10px] text-[var(--muted-foreground)]">
-              Скролльте горизонтально
-            </span>
-          </div>
-
-          <div className="flex overflow-x-auto gap-3 pb-3 pt-1 scrollbar-none snap-x touch-pan-x">
-            {PALETTE_HEX.map((hex, i) => (
-              <button
-                key={hex}
-                onClick={() => {
-                  setSelectedColorIndex(i)
-                  setIsEraserMode(false)
-                }}
-                className={`h-[44px] w-[44px] min-w-[44px] min-h-[44px] shrink-0 rounded-xl border-2 transition-transform snap-center ${
-                  selectedColorIndex === i && !isEraserMode
-                    ? 'border-[var(--primary)] scale-105 ring-glow'
-                    : 'border-[var(--glass-border)]'
-                }`}
-                style={{ backgroundColor: hex }}
-                title={`Цвет ${hex}`}
-              />
-            ))}
-          </div>
-
-          {/* Eraser toggle button and remaining charge indicator */}
-          <div className="flex items-center justify-between gap-4">
-            <button
-              onClick={() => setIsEraserMode(!isEraserMode)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all active:scale-95 ${
-                isEraserMode
-                  ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_10px_rgba(var(--primary-rgb),0.2)]'
-                  : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
-              }`}
-            >
-              <Eraser className="h-4 w-4" />
-              <span className="text-xs font-semibold">Ластик</span>
-            </button>
-
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--muted-foreground)]">
-              <Zap className="h-4 w-4 text-[var(--accent)]" />
-              <span>
-                Заряды:{' '}
-                <span className="text-[var(--foreground)] font-bold">
-                  {pendingCount > 0 ? charges - pendingCount : charges} /{' '}
-                  {maxCharges}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          {/* Full-width Confirm (X Pixels) action button and Cancel button */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                clearDrafts()
-                setIsActiveDrawingMode(false)
-              }}
-              className="px-4 py-3 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] active:scale-95 transition-all"
-            >
-              Отмена
-            </button>
-            <button
-              onClick={() => {
-                handleConfirmDrafts()
-                setIsActiveDrawingMode(false)
-              }}
-              disabled={pendingCount === 0}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-            >
-              <Check className="h-4 w-4 animate-in fade-in" />
-              <span>Подтвердить ({pendingCount} пикс.)</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* State C (Pixel Info Mobile Sheet) */}
-      {!isActiveDrawingMode && pixelInfoQuery && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-[var(--glass-border)] rounded-t-2xl shadow-2xl p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-bottom duration-300">
-          <div className="w-12 h-1 bg-[var(--glass-border)] rounded-full mx-auto mb-1" />
-
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-display font-bold">
-              Пиксель ({pixelInfoQuery.x}, {pixelInfoQuery.y})
-            </span>
-            <button
-              onClick={() => setPixelInfoQuery(null)}
-              className="p-2 rounded-xl text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg)] transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {pixelInfoQuery.loading ? (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Загрузка...
-            </p>
-          ) : pixelInfoQuery.data ? (
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2">
-                <span
-                  className="h-4 w-4 rounded border border-[var(--glass-border)] shrink-0"
-                  style={{
-                    backgroundColor:
-                      PALETTE_HEX[pixelInfoQuery.data.color_idx] ?? '#000',
-                  }}
-                />
-                <span className="text-[var(--muted-foreground)]">
-                  Автор:{' '}
-                  <span className="text-[var(--foreground)] font-semibold">
-                    {pixelInfoQuery.data.username ?? 'неизвестен'}
-                  </span>
-                </span>
-              </div>
-              <div className="text-[var(--muted-foreground)] text-xs">
-                {new Date(pixelInfoQuery.data.updated_at).toLocaleString(
-                  'ru-RU',
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Этот пиксель ещё никто не закрашивал.
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              setPixelInfoQuery(null)
-              setIsActiveDrawingMode(true)
-              setIsPaletteOpen(true)
-            }}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] active:scale-95 transition-all text-sm"
-          >
-            <Brush className="h-5 w-5" />
-            <span>Рисовать</span>
-          </button>
-        </div>
-      )}
-
-      {/* ==================== DESKTOP BOTTOM FLOATING BAR ==================== */}
+      {/* ==================== EXPANDABLE BOTTOM CONTROL BAR (BETTER PLACE UX) ==================== */}
       {!pixelInfoQuery && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-max max-w-[90vw] z-10 pointer-events-none hidden md:flex flex-col items-center gap-3">
-          {isPaletteOpen && (
-            <div className="pointer-events-auto w-full max-w-[320px] glass-strong p-4 rounded-2xl shadow-2xl border border-[var(--glass-border)] animate-in fade-in slide-in-from-bottom-3 duration-200">
-              <div className="flex items-center justify-between mb-3 border-b border-[var(--glass-border)] pb-2">
-                <span className="text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider flex items-center gap-1.5">
-                  <Palette className="h-4 w-4 text-[var(--primary)]" /> Выберите
-                  цвет
-                </span>
-                <button
-                  onClick={() => setIsPaletteOpen(false)}
-                  className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded-lg hover:bg-[var(--glass-bg)]"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="grid grid-cols-8 gap-2">
-                {PALETTE_HEX.map((hex, i) => (
-                  <button
-                    key={hex}
-                    onClick={() => {
-                      setSelectedColorIndex(i)
-                      setIsEraserMode(false)
-                    }}
-                    className={`h-7 w-7 sm:h-8 sm:w-8 rounded-lg border-2 transition-transform hover:scale-110 focus-ring ${
-                      selectedColorIndex === i && !isEraserMode
-                        ? 'border-[var(--primary)] scale-110 ring-glow'
-                        : 'border-[var(--glass-border)]'
-                    }`}
-                    style={{ backgroundColor: hex }}
-                    title={`Цвет ${hex}`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="glass-strong flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 pointer-events-auto rounded-2xl shadow-lg">
-            <div className="flex flex-col gap-1.5 min-w-[120px] sm:min-w-[140px] border-r border-[var(--glass-border)] pr-3 sm:pr-5 shrink-0">
-              <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-1.5 text-[10px] sm:text-xs text-[var(--muted-foreground)] font-medium uppercase tracking-wider">
-                  <Zap
-                    className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${charges > 0 ? 'text-[var(--accent)]' : 'text-[var(--destructive)]'}`}
-                  />
-                  Заряды
-                </span>
-                <span
-                  className="font-retro8bit text-base sm:text-lg font-bold"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {pendingCount > 0 ? (
-                    <span className="text-amber-400">
-                      {charges - pendingCount}
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto transition-all duration-300 ease-in-out">
+          {!isPaletteOpen && !isActiveDrawingMode && pendingCount === 0 ? (
+            /* --- CLOSED STATE (Floating Pill Button & Charges) --- */
+            <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+              {/* Charge Counter Floating Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-md backdrop-blur-md">
+                <Zap
+                  className={`h-3.5 w-3.5 ${charges > 0 ? 'text-amber-500' : 'text-slate-400'}`}
+                />
+                <span className="text-xs font-bold font-mono text-slate-800 dark:text-slate-200">
+                  {charges === maxCharges ? (
+                    <span className="text-emerald-500 dark:text-emerald-400 font-extrabold">
+                      MAX
                     </span>
-                  ) : charges === maxCharges ? (
-                    'MAX'
                   ) : (
                     charges
                   )}
-                  <span className="text-[10px] sm:text-sm text-[var(--muted-foreground)] font-sans ml-1">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal ml-1">
                     / {maxCharges}
                   </span>
                 </span>
+                {/* Thin energy regen bar indicator */}
+                <div className="h-1.5 w-10 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden ml-1">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      charges >= maxCharges
+                        ? 'bg-emerald-500'
+                        : 'bg-amber-500 animate-pulse'
+                    }`}
+                    style={{
+                      width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
+                    }}
+                  />
+                </div>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-[var(--glass-border)] overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-300 ease-out ${charges >= maxCharges ? 'border-animated-rainbow' : 'bg-[var(--accent)]'}`}
-                  style={{
-                    width: `${charges >= maxCharges ? 100 : regenProgressFactor * 100}%`,
-                    transition: charges < maxCharges ? 'none' : 'width 0.3s',
+
+              {/* Action Bar: Center Pin, Main "Paint" Pill, Zoom Controls */}
+              <div className="flex items-center gap-3 p-1.5 rounded-full bg-white/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 shadow-2xl backdrop-blur-xl">
+                {/* Left Action: Center / Focus My Position */}
+                <button
+                  onClick={handleFocusMyPosition}
+                  className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all shadow-sm"
+                  title="Моя позиция"
+                >
+                  <Crosshair className="h-5 w-5" />
+                </button>
+
+                {/* Primary Action Pill: "Paint" */}
+                <button
+                  onClick={() => {
+                    setIsActiveDrawingMode(true)
+                    setIsPaletteOpen(true)
                   }}
-                />
+                  className="flex items-center gap-2.5 px-6 h-11 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 text-white font-bold text-sm shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_25px_rgba(99,102,241,0.6)] hover:scale-105 active:scale-95 transition-all duration-200"
+                >
+                  <Brush className="h-4 w-4 animate-bounce" />
+                  <span>Рисовать</span>
+                </button>
+
+                {/* Right Action: Zoom In / Zoom Out Toggle Group */}
+                <div className="flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800/80 p-0.5 shadow-sm">
+                  <button
+                    onClick={() => zoomBy(1.3)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all"
+                    title="Приблизить"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => zoomBy(1 / 1.3)}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all"
+                    title="Отдалить"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
+          ) : (
+            /* --- OPEN / EXPANDED STATE (Better Place Color Palette Overlay) --- */
+            <div className="w-[92vw] max-w-[480px] p-4 rounded-3xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-2xl flex flex-col gap-4 animate-in slide-in-from-bottom-6 fade-in duration-300">
+              {/* TOP ROW: Color Palette Grid */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Palette className="h-3.5 w-3.5 text-indigo-500" /> Выбор
+                    цвета
+                  </span>
+                  <span className="text-[11px] font-mono font-medium text-slate-400">
+                    Заряды:{' '}
+                    <strong className="text-indigo-600 dark:text-indigo-400 font-bold">
+                      {pendingCount > 0 ? charges - pendingCount : charges} /{' '}
+                      {maxCharges}
+                    </strong>
+                  </span>
+                </div>
 
-            <div className="flex items-center gap-2 shrink-0 border-r border-[var(--glass-border)] pr-3 sm:pr-5">
-              <button
-                onClick={() => setIsPaletteOpen(!isPaletteOpen)}
-                className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 rounded-xl bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] border border-[var(--glass-border)] transition-all active:scale-95"
-              >
-                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--primary)]" />
-                <span className="text-sm font-medium hidden sm:inline">
-                  Палитра
-                </span>
-                <div
-                  className="h-4 w-4 sm:h-5 sm:w-5 rounded-md border border-white/40 shadow-inner"
-                  style={{ backgroundColor: PALETTE_HEX[selectedColorIndex] }}
-                />
-              </button>
-              <button
-                onClick={() => setIsEraserMode(!isEraserMode)}
-                className={`p-2 sm:p-2.5 rounded-xl border transition-all active:scale-95 ${
-                  isEraserMode
-                    ? 'border-[var(--primary)] bg-[var(--primary)]/20 text-[var(--primary)] shadow-[0_0_15px_rgba(var(--primary-rgb),0.3)]'
-                    : 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--glass-bg-strong)] text-[var(--muted-foreground)]'
-                }`}
-                title="Ластик (стирает черновики)"
-              >
-                <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
-              </button>
-            </div>
+                {/* Scrollable Palette Grid of Circles */}
+                <div className="grid grid-cols-8 gap-2 max-h-[140px] overflow-y-auto p-1 scrollbar-thin">
+                  {PALETTE_HEX.map((hex, i) => (
+                    <button
+                      key={hex}
+                      onClick={() => {
+                        setSelectedColorIndex(i)
+                        setIsEraserMode(false)
+                      }}
+                      className={`h-9 w-9 rounded-full border-2 transition-all duration-200 hover:scale-110 active:scale-95 ${
+                        selectedColorIndex === i && !isEraserMode
+                          ? 'border-indigo-600 dark:border-indigo-400 scale-110 ring-4 ring-indigo-500/20 dark:ring-indigo-400/30 shadow-md'
+                          : 'border-white dark:border-slate-800 shadow-sm'
+                      }`}
+                      style={{ backgroundColor: hex }}
+                      title={`Цвет ${hex}`}
+                    />
+                  ))}
+                </div>
+              </div>
 
-            <div className="flex items-center gap-2 shrink-0 min-w-[130px] sm:min-w-[170px] justify-center">
-              {pendingCount > 0 ? (
-                <>
+              {/* BOTTOM BAR: Tools, Active Color Preview, Actions */}
+              <div className="flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+                {/* Left Side: Close & Eraser Tools */}
+                <div className="flex items-center gap-1.5">
                   <button
-                    onClick={handleConfirmDrafts}
-                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] font-bold hover:opacity-90 active:scale-95 transition-all shadow-[0_0_15px_rgba(var(--primary-rgb),0.4)] animate-in zoom-in-95"
+                    onClick={() => {
+                      clearDrafts()
+                      setIsPaletteOpen(false)
+                      setIsActiveDrawingMode(false)
+                    }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all"
+                    title="Закрыть"
                   >
-                    <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                    <span className="text-xs sm:text-sm">
-                      Подтвердить ({pendingCount})
-                    </span>
+                    <X className="h-5 w-5" />
                   </button>
+
                   <button
-                    onClick={clearDrafts}
-                    className="p-2 sm:p-2.5 rounded-xl border border-[var(--destructive)]/50 bg-[var(--destructive)]/10 text-[var(--destructive)] hover:bg-[var(--destructive)]/20 transition-all active:scale-95 animate-in zoom-in-95"
-                    title="Очистить черновик"
+                    onClick={() => setIsEraserMode(!isEraserMode)}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90 ${
+                      isEraserMode
+                        ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                    title="Ластик"
                   >
-                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Eraser className="h-5 w-5" />
                   </button>
-                </>
-              ) : (
-                <span className="text-[10px] sm:text-xs text-[var(--muted-foreground)] px-2 text-center hidden md:inline-block">
-                  Нарисуйте пиксели,
-                  <br />
-                  чтобы подтвердить
-                </span>
-              )}
+
+                  {pendingCount > 0 && (
+                    <button
+                      onClick={clearDrafts}
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 active:scale-90 transition-all"
+                      title="Очистить все черновики"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Center: Selected Color Preview Pill */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+                  <div
+                    className="h-4 w-4 rounded-full border border-white dark:border-slate-900 shadow-sm shrink-0"
+                    style={{
+                      backgroundColor: isEraserMode
+                        ? '#F43F5E'
+                        : PALETTE_HEX[selectedColorIndex],
+                    }}
+                  />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    {isEraserMode ? 'Ластик' : PALETTE_HEX[selectedColorIndex]}
+                  </span>
+                </div>
+
+                {/* Right Side: Primary "Confirm / Apply" Button */}
+                <button
+                  onClick={() => {
+                    handleConfirmDrafts()
+                    setIsPaletteOpen(false)
+                    setIsActiveDrawingMode(false)
+                  }}
+                  disabled={pendingCount === 0}
+                  className="flex items-center gap-2 px-5 h-10 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none active:scale-95 transition-all"
+                >
+                  <Check className="h-4 w-4" />
+                  <span>
+                    Применить {pendingCount > 0 ? `(${pendingCount})` : ''}
+                  </span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1767,6 +1561,8 @@ export default function PixelBattleCanvas({
           setIsDark={setIsDark}
           showGrid={showGrid}
           setShowGrid={setShowGrid}
+          enableBlinking={enableBlinking}
+          setEnableBlinking={setEnableBlinking}
         />
       )}
 
