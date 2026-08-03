@@ -34,6 +34,8 @@ import {
   Shield,
   Brush,
   Crosshair,
+  Pipette,
+  Loader2,
 } from 'lucide-react'
 
 // ============================================================================
@@ -137,6 +139,8 @@ export default function PixelBattleCanvas({
   >(new Map())
   const [pendingCount, setPendingCount] = useState(0)
   const [isEraserMode, setIsEraserMode] = useState(false)
+  const [isEyedropperMode, setIsEyedropperMode] = useState(false)
+  const [isLoadingCanvas, setIsLoadingCanvas] = useState(true)
   const [isActiveDrawingMode, setIsActiveDrawingMode] = useState(false)
   const [pixelInfoQuery, setPixelInfoQuery] = useState<{
     x: number
@@ -256,7 +260,19 @@ export default function PixelBattleCanvas({
 
       const key = `${gridX},${gridY}`
 
-      if (isEraserMode) {
+      if (isEyedropperMode) {
+        const idx = gridY * width + gridX
+        const colorIdx = pixelDataRef.current[idx]
+        if (
+          colorIdx !== undefined &&
+          colorIdx >= 0 &&
+          colorIdx < PALETTE_HEX.length
+        ) {
+          setSelectedColorIndex(colorIdx)
+        }
+        setIsEyedropperMode(false)
+        return true
+      } else if (isEraserMode) {
         if (pendingPixelsRef.current.has(key)) {
           pendingPixelsRef.current.delete(key)
           setPendingCount(pendingPixelsRef.current.size)
@@ -335,6 +351,7 @@ export default function PixelBattleCanvas({
       setPendingCount(0)
       dirtyRef.current = true
       setIsEraserMode(false)
+      setIsEyedropperMode(false)
     } catch (error) {
       console.error('Сервер отклонил пиксели:', error)
       clearDrafts()
@@ -1058,18 +1075,24 @@ export default function PixelBattleCanvas({
   }, [])
 
   useEffect(() => {
-    pixelService.loadAllPixels().then((dbPixels) => {
-      const offCtx = offscreenCtxRef.current
-      if (!offCtx) return
-      dbPixels.forEach(({ x, y, color_idx }: any) => {
-        const idx = y * width + x
-        pixelDataRef.current[idx] = color_idx
-        const single = offCtx.createImageData(1, 1)
-        new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx]
-        offCtx.putImageData(single, x, y)
+    pixelService
+      .loadAllPixels()
+      .then((dbPixels) => {
+        const offCtx = offscreenCtxRef.current
+        if (offCtx) {
+          dbPixels.forEach(({ x, y, color_idx }: any) => {
+            const idx = y * width + x
+            pixelDataRef.current[idx] = color_idx
+            const single = offCtx.createImageData(1, 1)
+            new Uint32Array(single.data.buffer)[0] = PALETTE_RGBA[color_idx]
+            offCtx.putImageData(single, x, y)
+          })
+          dirtyRef.current = true
+        }
       })
-      dirtyRef.current = true
-    })
+      .finally(() => {
+        setIsLoadingCanvas(false)
+      })
 
     const unsubscribe = pixelService.subscribeToPixels(
       ({ x, y, color_idx }) => {
@@ -1115,26 +1138,39 @@ export default function PixelBattleCanvas({
           onContextMenu={(e) => e.preventDefault()}
         />
 
-        {/* ==================== TOP HEADER BAR ==================== */}
-        {/* Top Left Floating Pill: Coords & Zoom */}
-        <div className="absolute top-4 left-4 z-20 pointer-events-auto flex items-center gap-2">
-          <div className="inline-flex h-11 items-center gap-3 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-4 shadow-lg backdrop-blur-md transition-all duration-300">
-            <span className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 pr-3">
-              <MousePointer2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-              <span ref={coordsLabelRef}>—, —</span>
-            </span>
-            <span className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200">
-              <ZoomIn className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-              <span ref={scaleLabelRef}>
-                {Math.round(transformRef.current.scale * 100)}%
+        {/* ==================== INITIAL CANVAS LOADING OVERLAY ==================== */}
+        {isLoadingCanvas && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-300 pointer-events-auto">
+            <div className="flex flex-col items-center gap-3 p-6 rounded-3xl bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-md">
+              <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+              <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                Загрузка Канваса
               </span>
-            </span>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Top Right Floating Bar: Profile, Actions */}
-        <div className="absolute top-4 right-4 z-20 pointer-events-auto flex items-center gap-2">
-          <div className="inline-flex h-11 items-center gap-1 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-1.5 shadow-lg backdrop-blur-md transition-all duration-300">
+        {/* ==================== TOP HEADER BAR ==================== */}
+        <div className="absolute top-4 inset-x-0 z-20 pointer-events-none flex justify-between w-full px-4 items-center">
+          {/* Top Left Floating Pill: Coords & Zoom */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            <div className="inline-flex h-11 items-center gap-3 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-4 shadow-lg backdrop-blur-md transition-all duration-300">
+              <span className="hidden md:flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 pr-3">
+                <MousePointer2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <span ref={coordsLabelRef}>—, —</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-xs font-mono font-semibold text-slate-700 dark:text-slate-200">
+                <ZoomIn className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                <span ref={scaleLabelRef}>
+                  {Math.round(transformRef.current.scale * 100)}%
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {/* Top Right Floating Bar: Profile, Actions */}
+          <div className="pointer-events-auto flex items-center gap-2">
+            <div className="inline-flex h-11 items-center gap-1 rounded-full border border-slate-200/80 dark:border-slate-800/80 bg-white/80 dark:bg-slate-950/80 px-1.5 shadow-lg backdrop-blur-md transition-all duration-300">
             {/* Template Overlay Button */}
             <button
               onClick={() => setIsTemplateOpen(true)}
@@ -1197,6 +1233,7 @@ export default function PixelBattleCanvas({
             </button>
           </div>
         </div>
+      </div>
 
         {/* Profile Popover */}
         {isProfileOpen && (
@@ -1439,6 +1476,7 @@ export default function PixelBattleCanvas({
                       onClick={() => {
                         setSelectedColorIndex(i)
                         setIsEraserMode(false)
+                        setIsEyedropperMode(false)
                       }}
                       className={`h-9 w-9 rounded-full border-2 transition-all duration-200 hover:scale-110 active:scale-95 ${
                         selectedColorIndex === i && !isEraserMode
@@ -1454,22 +1492,26 @@ export default function PixelBattleCanvas({
 
               {/* BOTTOM BAR: Tools, Active Color Preview, Actions */}
               <div className="flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
-                {/* Left Side: Close & Eraser Tools */}
+                {/* Left Side: Close & Tools */}
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => {
                       clearDrafts()
                       setIsPaletteOpen(false)
                       setIsActiveDrawingMode(false)
+                      setIsEyedropperMode(false)
                     }}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-90 transition-all"
-                    title="Закрыть"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/40 dark:hover:bg-red-500/30 active:scale-90 transition-all"
+                    title="Отмена"
                   >
                     <X className="h-5 w-5" />
                   </button>
 
                   <button
-                    onClick={() => setIsEraserMode(!isEraserMode)}
+                    onClick={() => {
+                      setIsEraserMode(!isEraserMode)
+                      setIsEyedropperMode(false)
+                    }}
                     className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90 ${
                       isEraserMode
                         ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30'
@@ -1478,6 +1520,21 @@ export default function PixelBattleCanvas({
                     title="Ластик"
                   >
                     <Eraser className="h-5 w-5" />
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsEyedropperMode(!isEyedropperMode)
+                      setIsEraserMode(false)
+                    }}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition-all active:scale-90 ${
+                      isEyedropperMode
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                    }`}
+                    title="Пипетка (выбор цвета)"
+                  >
+                    <Pipette className="h-5 w-5" />
                   </button>
 
                   {pendingCount > 0 && (
@@ -1502,7 +1559,11 @@ export default function PixelBattleCanvas({
                     }}
                   />
                   <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    {isEraserMode ? 'Ластик' : PALETTE_HEX[selectedColorIndex]}
+                    {isEyedropperMode
+                      ? 'Пипетка'
+                      : isEraserMode
+                        ? 'Ластик'
+                        : PALETTE_HEX[selectedColorIndex]}
                   </span>
                 </div>
 
